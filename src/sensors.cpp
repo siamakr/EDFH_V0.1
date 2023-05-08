@@ -1,12 +1,13 @@
 ///// Sensors.cpp /////
 
-#include "Sensors.h"
+#include "sensors.h"
 
-//BNO080 * fsm = new BNO080(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin);
-
+ fsm_data_t data; 
+ BNO080 fsm;
 
 Sensors::Sensors(void){
- //fsm = new BNO080(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin);
+  //fsm = new BNO080();
+
 }
 
 void Sensors::init(void)
@@ -21,19 +22,19 @@ void Sensors::init(void)
   Serial.print("FSM Init start..."); 
   delay(300);
 
-  if (fsm->beginSPI(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin, 3000000) == false)
+  if (fsm.beginSPI(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin, 3000000) == false)
   {
     Serial.println("BNO080 over SPI not detected. Are you sure you have all 6 connections? Freezing...");
     while(1);
   }
 
-    fsm->calibrateAll();
-    fsm->enableLinearAccelerometer(DT_MSEC);  // m/s^2 no gravity
-    fsm->enableRotationVector(DT_MSEC);  // quat
-    //fsm->enableGameRotationVector(DT_MSEC);
-    fsm->enableGyro(DT_MSEC);  // rad/s
-    //fsm->enableGyroIntegratedRotationVector(DT_MSEC);
-    //fsm->enableMagnetometer(DT_MSEC);  // cannot be enabled at the same time as RotationVector (will not produce data)
+    fsm.calibrateAll();
+    fsm.enableLinearAccelerometer(DT_MSEC);  // m/s^2 no gravity
+    fsm.enableRotationVector(DT_MSEC);  // quat
+    //fsm.enableGameRotationVector(DT_MSEC);
+    fsm.enableGyro(DT_MSEC);  // rad/s
+    //fsm.enableGyroIntegratedRotationVector(DT_MSEC);
+    //fsm.enableMagnetometer(DT_MSEC);  // cannot be enabled at the same time as RotationVector (will not produce data)
   
   Serial.println("FSM Init Finished..."); 
   delay(300);
@@ -53,8 +54,8 @@ void save_calibrate_fsm(void)
 
     if(incoming == 's')
     {
-      fsm->saveCalibration(); //Saves the current dynamic calibration data (DCD) to memory
-      fsm->requestCalibrationStatus(); //Sends command to get the latest calibration status
+      fsm.saveCalibration(); //Saves the current dynamic calibration data (DCD) to memory
+      fsm.requestCalibrationStatus(); //Sends command to get the latest calibration status
 
       //Wait for calibration response, timeout if no response
       int counter = 100;
@@ -62,11 +63,11 @@ void save_calibrate_fsm(void)
       while(1)
       {
         if(--counter == 0) break;
-        if(fsm->dataAvailable() == true)
+        if(fsm.dataAvailable() == true)
         {
           //The IMU can report many different things. We must wait
           //for the ME Calibration Response Status byte to go to zero
-          if(fsm->calibrationComplete() == true)
+          if(fsm.calibrationComplete() == true)
           {
             Serial.println("Calibration data successfully stored");
             delay(1000);
@@ -88,18 +89,18 @@ void save_calibrate_fsm(void)
 
 void sample_fsm(void)
 {
-  if(fsm->dataAvailable() == true)
+  if(fsm.dataAvailable() == true)
   {
     //..... Sample IMU .....//
     //... Linear Accel ...//
-    fsm->getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
+    fsm.getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
 
     // data.ax = fsm.getAccelX();
     // data.ay = fsm.getAccelY();
     // data.az = fsm.getAccelZ();
 
     //... Gyro ...//
-    fsm->getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
+    fsm.getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
 
     // data.gx = fsm.getFastGyroX();
     // data.gy = fsm.getFastGyroY();
@@ -110,7 +111,7 @@ void sample_fsm(void)
     // data.gz = fsm.getGyroZ();
     
     //... Rotation Vector ...//
-    fsm->getQuat(data.qi, data.qj, data.qk, data.qw, data.quatRadianAccuracy, data.quatAccuracy);
+    fsm.getQuat(data.qi, data.qj, data.qk, data.qw, data.quatRadianAccuracy, data.quatAccuracy);
 
     // data.qi = fsm.getQuatI();
     // data.qj = fsm.getQuatJ();
@@ -119,9 +120,9 @@ void sample_fsm(void)
 
 
     //... Euler Angle Representation ...//
-    data.roll = fsm->getRoll();
-    data.pitch = fsm->getPitch();
-    data.yaw = fsm->getYaw();    
+    data.roll = fsm.getRoll();
+    data.pitch = fsm.getPitch();
+    data.yaw = fsm.getYaw();    
 
   }
 

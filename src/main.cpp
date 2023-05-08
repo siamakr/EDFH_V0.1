@@ -4,8 +4,10 @@
 
 
 
-//Sensors sensor; 
+Sensors * sensor; 
 
+//..... Timing Vars.....//
+float sensor_timer, print_timer;
 
 
 void setup() {
@@ -17,7 +19,7 @@ void setup() {
   
   delay(100);
   //first function call
-  //sensor.init();     //arg=true when you want to calibrate IMU
+  sensor->init();     //arg=true when you want to calibrate IMU
   delay(100);
 
 }
@@ -31,7 +33,7 @@ void loop() {
   //   sensor.sample_fsm();
   // }
 
-  // //..... Print Timer .....//
+  // //..... Print Timer .....//S
   // if(millis() - print_timer >= DT_MSEC * 4) //DT_MSEC * 4 = 40mS
   // {
   //   print_timer = millis();
@@ -39,6 +41,6 @@ void loop() {
   // }
   
   // sensor.save_calibrate_fsm();
-  // sensor.sample_fsm(); 
-  // sensor.print_fsm_calibration(); 
+   sensor->sample_fsm(); 
+   sensor->print_fsm_calibration(); 
 }

@@ -1,4 +1,4 @@
-///// Sensors.h /////
+///// sensors.h /////
 
 #ifndef _EDFH_SENSORS_H
 #define _EDFH_SENSORS_H
@@ -19,10 +19,10 @@ using namespace BLA;
 
 
 //..... SPI Pin Definitons .....//
-byte imuCSPin = 10;
-byte imuWAKPin = 7;
-byte imuINTPin = 8;
-byte imuRSTPin = 9;
+const byte imuCSPin = 10;
+const byte imuWAKPin = 7;
+const byte imuINTPin = 8;
+const byte imuRSTPin = 9;
 
 //.......... Structure Definitions ..........//
 typedef struct
@@ -38,19 +38,15 @@ typedef struct
     byte quatAccuracy = 0; 
 } fsm_data_t;
 
-//..... Object Definition .....//
-fsm_data_t data; 
-BNO080 * fsm;
-
-
-//..... Timing Vars.....//
-float sensor_timer, print_timer;
 
 //...... Class Definition .....//
 class Sensors
-{
-    
+{    
 public:
+
+//..... Object Definition .....//
+
+    
 
     Sensors( void );
     
@@ -67,11 +63,12 @@ public:
     void print_fsm_calibration(void);
 
     //... FSM305 Functions End ...//
-
+// //..... Object Definition .....//
+ fsm_data_t data; 
+ BNO080 fsm;
 
 private:
 
-    
     // adafruit_bno055_offsets_t bnoOffset;
 
     // float IIR( float newSample, float prevOutput, float alpha);
