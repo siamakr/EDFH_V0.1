@@ -1,11 +1,11 @@
 #include <Arduino.h>
-#include "./sensors.h"
-// #include "Servo.h"
+#include "Sensors.h"
+#include "Controller.h"
 
 
 
 Sensors sensor; 
-
+Controller control; 
 //..... Timing Vars.....//
 float sensor_timer, print_timer;
 
@@ -22,24 +22,28 @@ void setup() {
   //first function call
   sensor.init();     //arg=true when you want to calibrate IMU
   delay(100);
+  control.init();
+
 
 }
 
 void loop() {
-  Serial.print("lll");
-  // //..... Sensor Timer .....//
-  // if(millis() - sensor_timer >= DT_MSEC)
-  // {
-  //   sensor_timer = millis();
-  //   sensor.sample_fsm();
-  // }
 
-  // //..... Print Timer .....//S
-  // if(millis() - print_timer >= DT_MSEC * 4) //DT_MSEC * 4 = 40mS
-  // {
-  //   print_timer = millis();
-  //   sensor.print_fsm();
-  // }
+  sensor.sample_fsm();
+  //..... Sensor Timer .....//
+  if(millis() - sensor_timer >= DT_MSEC)
+  {
+    sensor_timer = millis();
+    sensor.sample_lidar();
+    control.hover(sensor.data.roll, sensor.data.pitch, sensor.data.yaw, sensor.data.gx, sensor.data.gy, sensor.data.gz, sensor.data.z, sensor.data.vz);
+  }
+
+  //..... Print Timer .....//
+  if(millis() - print_timer >= DT_MSEC * 4) //DT_MSEC * 4 = 40mS
+  {
+    print_timer = millis();
+    sensor.print_fsm();
+  }
   
   // sensor.save_calibrate_fsm();
    sensor.sample_fsm(); 
