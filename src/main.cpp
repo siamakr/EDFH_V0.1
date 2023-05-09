@@ -1,10 +1,10 @@
 #include <Arduino.h>
-#include "sensors.h"
+#include "./sensors.h"
 // #include "Servo.h"
 
 
 
-Sensors * sensor; 
+Sensors sensor; 
 
 //..... Timing Vars.....//
 float sensor_timer, print_timer;
@@ -20,7 +20,7 @@ void setup() {
   
   delay(100);
   //first function call
-  sensor->init();     //arg=true when you want to calibrate IMU
+  sensor.init();     //arg=true when you want to calibrate IMU
   delay(100);
 
 }
@@ -42,6 +42,6 @@ void loop() {
   // }
   
   // sensor.save_calibrate_fsm();
-   sensor->sample_fsm(); 
-   sensor->print_fsm_calibration(); 
+   sensor.sample_fsm(); 
+   sensor.print_fsm_calibration(); 
 }
