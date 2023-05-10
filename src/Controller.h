@@ -72,7 +72,7 @@ public:
         //load new Thrust Vector from desired torque
         float Tx{ U_hov(3) * sin(U_hov(0)) };
         float Ty{ U_hov(3) * sin(U_hov(1)) * cos(U_hov(0)) };
-        float Tz{  U_hov(3) *cos(U_hov(1)) * cos(U_hov(0))  };          
+        float Tz{ U_hov(3) * cos(U_hov(1)) * cos(U_hov(0)) };          
 
             // Forces including COM change of gimballing EDF (adding force components per mass force)
             //  float Tx{ (U_hov(3) * sin(U_hov(0)) };
@@ -89,13 +89,24 @@ public:
         // U_hov(1) = U_hov(1) * cos(U_hov(0));
 
         //filter servo angles, the more filtering, the bigger the delay
-        //U_hov(0) = IIR(U_hov(0), pdata1, u_alpha);
-        //U_hov(1) = IIR(U_hov(1), pdata2, u_alpha);
+        U_hov(0) = IIR(U_hov(0), cd.angle_x, u_alpha);
+        U_hov(1) = IIR(U_hov(1), cd.angle_y, u_alpha);
 
         //limit servo angles to +-15º
         U_hov(0) = limit(U_hov(0), d2r * -8, d2r * 8);
         U_hov(1) = limit(U_hov(1), d2r * -8, d2r * 8);
         U_hov(3) = limit(U_hov(3), 15.00f, 32.00f);
+        
+        //Actuate servos/edf motor 
+        act.sx.write(r2d * U_hov(0));
+        act.sy.write(r2d * U_hov(1));
+        act.edf.write(U_hov(3));
+
+        //Store debug/filtering data into struct
+        cd.angle_x = U_hov(0);
+        cd.angle_y = U_hov(1);
+        cd.Thrust = U_hov(3);
+
     }
 
 private:
@@ -130,6 +141,10 @@ private:
         return value;
     }
 
+    float IIR(float newSample, float prevOutput, float alpha)
+    {
+        return ( (1.0f-alpha)*newSample + alpha * prevOutput);
+    }
 
 };
 

@@ -180,6 +180,145 @@ public:
         //Serial.println("Vehicle is in SAFE-MODE... must restart....");
         while(1);
     }
+    // void servo_calibration(void)
+    // {
+    //     if(Serial.available())
+    //     {
+    //         byte incoming = Serial.read();
+
+    //         switch (incoming)
+    //         {
+    //         case '1': // display IMU angles
+    //             display_imu();
+    //         break;
+
+    //         case '2': // begin both servo calibrations
+    //             x_servo_calib();
+    //             delay(3000);
+    //             Serial.println("\n\n");
+    //             y_servo_calib();
+    //         break;
+
+    //         case '3':
+    //             manual_servo_control();
+    //         break;
+
+    //         default:
+    //         break;
+    //         }
+    //     }
+    // }
+
+    // void x_servo_calib(void)
+    // {
+    //     //center both servos
+    //     sx.writeMicroseconds(SERVO_X_CENTER_US);
+    //     sy.writeMicroseconds(SERVO_Y_CENTER_US);
+    //     delay(1000);
+    //     //save starting IMU values (unadjusted)
+    //     samplebno();
+    //     float r_raw{r2d(data.roll)};
+    //     float p_raw{r2d(data.pitch)};
+    //     sx.writeMicroseconds(SERVO_X_MIN_US); 
+    //     delay(1000);
+
+    //     for (int i = SERVO_X_MIN_US; i <  SERVO_X_MAX_US; i++)
+    //     {
+    //         sx.writeMicroseconds(i);
+    //         delay(200);
+    //         samplebno();
+    //         Serial.print(i);
+    //         Serial.print(",");
+    //         Serial.print(r2d(data.roll),5);
+    //         Serial.print(",");
+    //         Serial.println(d2r(data.roll) - r_raw,5);
+    //     }
+    //     delay(500);
+    // }
+
+    // void y_servo_calib(void)
+    // {
+    //     //center both servos
+    //     sx.writeMicroseconds(SERVO_X_CENTER_US);
+    //     sy.writeMicroseconds(SERVO_Y_CENTER_US);
+    //     delay(1000);
+    //     //save starting IMU values (unadjusted)
+    //     samplebno();
+    //     float r_raw{r2d(data.roll)};
+    //     float p_raw{r2d(data.pitch)};
+    //     sy.writeMicroseconds(SERVO_Y_MIN_US); 
+    //     delay(1000);
+
+    //     for (int i = SERVO_Y_MIN_US; i <  SERVO_Y_MAX_US; i++)
+    //     {
+    //         sy.writeMicroseconds(i);
+    //         delay(200);
+    //         samplebno();
+    //         Serial.print(i);
+    //         Serial.print(",");
+    //         Serial.print(r2d(data.pitch),5);
+    //         Serial.print(",");
+    //         Serial.println(r2d(data.pitch) + p_raw,5);
+    //     }
+    //     delay(500);
+    // }
+
+    // void manual_servo_control(void){
+    
+    // //if (Serial.available())
+    // // {
+    //     byte incoming = Serial.read();
+
+    //     switch (incoming)
+    //     {
+    //     case 'm':     //set both servos to mid-point
+    //     pwmx = SERVO_X_CENTER_US;
+    //     pwmy = SERVO_Y_CENTER_US;
+    //     break;
+    //     case 'z':     //decrement by 10us
+    //     pwmx +=1;
+    //     break;
+    //     case 'c':     //increment by 10us
+    //     pwmx -=1;
+    //     break;
+    //     case 'x':     //center x servo to 1500
+    //     pwmx = SERVO_X_CENTER_US;
+    //     break;
+    //     case 't':     //decrement by 10us
+    //     pwmy +=1;
+    //     break;
+    //     case 'u':     //increment by 10us
+    //     pwmy -=1;
+    //     break;
+    //     case 'y':     //center x servo to 1500
+    //     pwmy = SERVO_Y_CENTER_US;
+    //     break;
+
+    //     default:
+    //     break;
+    //     }
+    // // }
+    // sx.writeMicroseconds(pwmx);
+    // sy.writeMicroseconds(pwmy);
+    // delay(200);
+    // samplebno();
+    // samplebno();
+    // char text[40];
+    // sprintf(text, "%i,  %.5f  ,%i,  %.5f", pwmx, r2d(data.roll), pwmy, r2d(data.pitch)); 
+    // Serial.println(text);
+
+
+
+    // }
+
+    // void display_imu(void)
+    // {
+    // char text[50]; 
+    // samplebno(); 
+    // sprintf(text, "%.5f, %.5f %.5f", r2d(data.roll), r2d(data.pitch), r2d(data.yaw)); 
+    // Serial.println(text); 
+
+    // }
 
 private:
 
