@@ -13,97 +13,110 @@
 #define r2d (180.00f/PI)
 
 // Teensy 4.1 Pin assignments
-#define RW_PIN 3
-#define EDF_PIN 4
-#define YSERVO_PIN 5
-#define XSERVO_PIN 6
+#define RW_PIN 37
+#define EDF_PIN 36
+#define YSERVO_PIN 33
+#define XSERVO_PIN 14
 
-//// CONSTANTS  ///////
-#define COM_TO_TVC 0.1985
-#define MASS 3.033                    //Kg
-#define MASS_EDF .700 
+//// Vehicle Specs + General Constants
+#define COM_TO_TVC 0.1335
+#define MASS 3.008                    //Kg
 #define G 9.87
-#define MAX_ANGLE_SERVO 8           //Deg
-#define ROLL_OFFSET (0.533 * PI / 180)
-#define PITCH_OFFSET (-11.16 * PI / 180)
-//#define SERVO_MAX_SEC_PER_DEG 0.001667      //dt/.001667 |(dt=0.1) = 6º
+
+//// Vehicle's Minimums and Maximums 
+#define MAX_ANGLE_SERVO 8.00f           //Deg
 #define SERVO_MAX_SEC_PER_DEG 0.003333f      //dt/.003333 |(dt=0.1) = 3º
 #define SERVO_MAX_SEC_PER_RAD 0.0095496f      //dt/.003333 |(dt=0.1) = 3º
-//#define DT .01
-#define SERVO_MAX_DEGREE_PER_DT 12
+#define SERVO_MAX_DEGREE_PER_DT 1.2
 #define MAX_VEHICLE_ANGLE_DEG 35.00f
 #define DEADBAND_ANGLE_DEG 0.001f
 #define SERVO_ANG_TO_TVC_ANG 3.00f
-#define LIDAR_MOUNT_OFFSET_M 0.145
 
-#define PITCH_TVC_CENTER_PWM 1462     //uSec
-#define PITCH_TVC_MAX_PWM 1950        //uSec
-#define PITCH_TVC_MIN_PWM 1020        //uSec
-#define ROLL_TVC_CENTER_PWM 1500       //uSec
-#define ROLL_TVC_MAX_PWM 1885          //uSec
-#define ROLL_TVC_MIN_PWM 1060          //uSec
-#define EDF_OFF_PWM 900              //uSec
-#define EDF_MIN_PWM 1500              //uSec
-#define EDF_MAX_PWM 2000              //uSec
-#define EDF_MAX_SUSTAINED_PWM 1730    //uSec
-#define EDF_IDLE_PWM 1600             //uSec
+//// EDF Params 
+#define EDF_OFF_PWM 900                 //uSec
+#define EDF_MIN_PWM 1500                //uSec
+#define EDF_MAX_PWM 2000                //uSec
+#define EDF_MAX_SUSTAINED_PWM 1730      //uSec
+#define EDF_IDLE_PWM 1600               //uSec
 
-//SERVO-ANGLE TO TVC ANGLE POLYNOMIAL TRANSOFORMATOR
-#define X_P1 0.0
-#define X_P2 32.07
+//VALUES SET FOR +-15º GIMBAL ANGLE FOR BOTH X AND Y
+#define SERVO_X_CENTER_US 1422
+#define SERVO_Y_CENTER_US 1576
+#define SERVO_X_MIN_US 1026
+#define SERVO_Y_MIN_US 1026
+#define SERVO_X_MAX_US 1900
+#define SERVO_Y_MAX_US 1900
+
+////////// Version 4 //////////
+#define X_P1 0.1174
+#define X_P2 33.20
 #define X_P3 1422
 
-#define Y_P1 0
-#define Y_P2 -25.68
-//#define X_P2 -22.12         //real value of the regression test, can be reversed
-#define Y_P3 1518
+#define Y_P1 -0.2077
+#define Y_P2 -26.89
+#define Y_P3 1576
 
+////////// Version 3 //////////
+//#define X_P1 0.1243
+//#define X_P2 33.11
+//#define X_P3 1428
 //
-//#define Y_P1 0
-//#define Y_P2 -25.68
-////#define X_P2 -22.12         //real value of the regression test, can be reversed
-//#define Y_P3 1518
-//#define X_P1 0.0
-//#define X_P2 32.07
-//#define X_P3 1452
-//#define YY_P1 -.204054981741083f
-//#define YY_P2 1530.81204806643f
-
+//#define Y_P1 -0.2112
+//#define Y_P2 -26.83
+//#define Y_P3 1596
 
 //EDF MOTOR RPM TO THRUST TO PWM TRANSFORMATORS
-#define RAD2N_P1 0.018566536813619f    //Newtons to radians/s
+#define RAD2N_P1 0.018566536813619f    //Newtons to radians/s 
 #define RAD2N_P2 -22.506778362213f     //Newtons to Radians/s
-#define RAD2PWM_P1 0.2719786528784f    //Radians/s to PWM(us)
+#define RAD2PWM_P1 0.2719786528784f    //Radians/s to PWM(us)  
 #define RAD2PWM_P2 1010.29617153703f   //Radians/s to PWM(us)
 #define RPM_TO_OMEGA (2.0f*PI/60.0f)        //RPM to Radians/s
 #define OMEGA_TO_RPM (60.0f/(2.0f*PI))      //Radians/s to RPM
 #define GRAMS_TO_NEWTONS (9.80f / 1000.00f) //Grams(g) to Newtons(N)
 
+//MASS-MOMENT-OF-INERTIA OF VEHICLE
+#define V_JXX 0.0058595f
+#define V_JYY 0.0058595f
+#define V_JZZ 0.01202768f
+#define EDF_JZZ 0.0001744f      //MASS-MOMENT-OF-INERTIA OF EDF-PROP/MOTOR
+#define RW_JZZ 0.00174245f      //MASS-MOMENT-OF-INERTIA OF REACTION WHEEL
+
+typedef struct
+{
+    int pwmx, pwmy, pwmedf, pwmrw;
+}servo_pwm_data_t;
+
 //...... Class Definition .....//
 class Actuator
 {
-    
-
 public:
     Servo sx; 
     Servo sy; 
     Servo edf;
-    Servo rw;
+    //Servo rw;
+    //servo_pwm_data_t pwmdata;
 
     Actuator( void )
     {
 
     }
-    
-    void init_servos(void)
+
+    void init(void)
     {
         //attach servo pins
         sx.attach(XSERVO_PIN);
+        delay(100);
         sy.attach(YSERVO_PIN);
-        rw.attach(RW_PIN);
-        delay(200);
+        delay(100);
+    }
+    
+    void init_servos(void)
+    {
 
+        // rw.attach(RW_PIN);
+        // delay(200);
         zero_servos();
+        delay(1000);
     }
 
     void init_edf(void)
@@ -135,6 +148,7 @@ public:
         //map angle in degrees to pwm value for servo
         int pwmX{round( X_P1 * pow(angle,2) + X_P2 * angle + X_P3 ) };
         sx.writeMicroseconds(pwmX);
+        //pwmdata.pwmx = pwmX;
     }
 
     //write to Y servo
@@ -144,6 +158,7 @@ public:
         int pwmY{ round(Y_P1 * pow(angle,2) + Y_P2 * (angle) + Y_P3 ) };      // using polynomial regression coefficients to map tvc angle to pwm vals
         // int pwmY{ round(Y_P1 * pow(angle,2) - Y_P2 * (angle) + Y_P3 ) };      // true regression equations
         sy.writeMicroseconds(pwmY);
+        //pwmdata.pwmy = pwmY;
     }
 
     //to write command to EDF ESC
@@ -153,6 +168,7 @@ public:
         int pwm{round(omega * RAD2PWM_P1 + RAD2PWM_P2)};
         //Serial.print(pwm);
         edf.writeMicroseconds(pwm);
+        //pwmdata.pwmedf = pwm; 
     }
 
     // to shut everything down if we go past max set angle
@@ -180,145 +196,7 @@ public:
         //Serial.println("Vehicle is in SAFE-MODE... must restart....");
         while(1);
     }
-    // void servo_calibration(void)
-    // {
-    //     if(Serial.available())
-    //     {
-    //         byte incoming = Serial.read();
 
-    //         switch (incoming)
-    //         {
-    //         case '1': // display IMU angles
-    //             display_imu();
-    //         break;
-
-    //         case '2': // begin both servo calibrations
-    //             x_servo_calib();
-    //             delay(3000);
-    //             Serial.println("\n\n");
-    //             y_servo_calib();
-    //         break;
-
-    //         case '3':
-    //             manual_servo_control();
-    //         break;
-
-    //         default:
-    //         break;
-    //         }
-    //     }
-    // }
-
-    // void x_servo_calib(void)
-    // {
-    //     //center both servos
-    //     sx.writeMicroseconds(SERVO_X_CENTER_US);
-    //     sy.writeMicroseconds(SERVO_Y_CENTER_US);
-    //     delay(1000);
-    //     //save starting IMU values (unadjusted)
-    //     samplebno();
-    //     float r_raw{r2d(data.roll)};
-    //     float p_raw{r2d(data.pitch)};
-    //     sx.writeMicroseconds(SERVO_X_MIN_US); 
-    //     delay(1000);
-
-    //     for (int i = SERVO_X_MIN_US; i <  SERVO_X_MAX_US; i++)
-    //     {
-    //         sx.writeMicroseconds(i);
-    //         delay(200);
-    //         samplebno();
-    //         Serial.print(i);
-    //         Serial.print(",");
-    //         Serial.print(r2d(data.roll),5);
-    //         Serial.print(",");
-    //         Serial.println(d2r(data.roll) - r_raw,5);
-    //     }
-    //     delay(500);
-    // }
-
-    // void y_servo_calib(void)
-    // {
-    //     //center both servos
-    //     sx.writeMicroseconds(SERVO_X_CENTER_US);
-    //     sy.writeMicroseconds(SERVO_Y_CENTER_US);
-    //     delay(1000);
-    //     //save starting IMU values (unadjusted)
-    //     samplebno();
-    //     float r_raw{r2d(data.roll)};
-    //     float p_raw{r2d(data.pitch)};
-    //     sy.writeMicroseconds(SERVO_Y_MIN_US); 
-    //     delay(1000);
-
-    //     for (int i = SERVO_Y_MIN_US; i <  SERVO_Y_MAX_US; i++)
-    //     {
-    //         sy.writeMicroseconds(i);
-    //         delay(200);
-    //         samplebno();
-    //         Serial.print(i);
-    //         Serial.print(",");
-    //         Serial.print(r2d(data.pitch),5);
-    //         Serial.print(",");
-    //         Serial.println(r2d(data.pitch) + p_raw,5);
-    //     }
-    //     delay(500);
-    // }
-
-    // void manual_servo_control(void){
-    
-    // //if (Serial.available())
-    // // {
-    //     byte incoming = Serial.read();
-
-    //     switch (incoming)
-    //     {
-    //     case 'm':     //set both servos to mid-point
-    //     pwmx = SERVO_X_CENTER_US;
-    //     pwmy = SERVO_Y_CENTER_US;
-    //     break;
-    //     case 'z':     //decrement by 10us
-    //     pwmx +=1;
-    //     break;
-    //     case 'c':     //increment by 10us
-    //     pwmx -=1;
-    //     break;
-    //     case 'x':     //center x servo to 1500
-    //     pwmx = SERVO_X_CENTER_US;
-    //     break;
-    //     case 't':     //decrement by 10us
-    //     pwmy +=1;
-    //     break;
-    //     case 'u':     //increment by 10us
-    //     pwmy -=1;
-    //     break;
-    //     case 'y':     //center x servo to 1500
-    //     pwmy = SERVO_Y_CENTER_US;
-    //     break;
-
-    //     default:
-    //     break;
-    //     }
-    // // }
-    // sx.writeMicroseconds(pwmx);
-    // sy.writeMicroseconds(pwmy);
-    // delay(200);
-    // samplebno();
-    // samplebno();
-    // char text[40];
-    // sprintf(text, "%i,  %.5f  ,%i,  %.5f", pwmx, r2d(data.roll), pwmy, r2d(data.pitch)); 
-    // Serial.println(text);
-
-
-
-    // }
-
-    // void display_imu(void)
-    // {
-    // char text[50]; 
-    // samplebno(); 
-    // sprintf(text, "%.5f, %.5f %.5f", r2d(data.roll), r2d(data.pitch), r2d(data.yaw)); 
-    // Serial.println(text); 
-
-    // }
 
 private:
 
