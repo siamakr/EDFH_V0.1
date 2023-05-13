@@ -3,7 +3,7 @@
 #ifndef _EDFH_CONTROLLER_H
 #define _EDFH_CONTROLLER_H
 
-#include "Actuator.h"
+#include "Servo.h"
 #include <Math.h>
 #include <BasicLinearAlgebra.h>
 #include <stdint.h>
@@ -90,6 +90,7 @@ typedef struct
     float angle_x, angle_y, Tm, Tx, Ty, Tz, Tlqr;
     float trq_rw, trq_x, trq_y; 
     Matrix<8,1> e = {0.00f};
+    Matrix<4,1> u = {0.00f};
     //add more data points as needed for debugging
 }controller_data_t;
 
@@ -114,11 +115,18 @@ public:
     
     void init(void)
     {
+        //... Servo Initialization ...//
+        Serial.println("initializing Servos..");
         init_servos();
         zero_servos();
         delay(500);
+        Serial.println("Servo Init done...");
+
+        //... EDF initialization/priming ...//
+        //Serial.println("EDF Prime begin ...");
         //act.init_edf();
         //act.prime_edf();
+        //Serial.println("EDF Priming done... ");
         
     }
 
@@ -142,10 +150,10 @@ public:
         //Use below for static hold-down tests 
         U(3) = MASS * G;
 
-        //calculate integral terms if within bounds
-        //U(0) += (error(0) <= d2r(3) || error(0) >= d2r(-3)) ? int_gain * (-(e_roll_prev - error(0)) * dt) : 0.00f;
-        //U(1) += (error(1) <= d2r(3) || error(1) >= d2r(-3)) ? int_gain * (-(e_pitch_prev - error(1)) * dt) : 0.00f;
-        //U(3) += int_z_gain * (error(6) - e_z_prev) ;
+        //calculate integral terms if within integeral bounds
+        //U(0) += (error(0) <= d2r*3.00f || error(0) >= d2r*-3.00f) ? int_gain * (-(cd.e(0) - error(0)) * dt) : 0.00f;
+        //U(1) += (error(1) <= d2r*3.00f || error(1) >= d2r*-3.00f) ? int_gain * (-(cd.e(1) - error(1)) * dt) : 0.00f;
+        //U(3) += int_z_gain * (error(6) - cd.e(6)) ;
 
 
         //load new Thrust Vector from desired torque
@@ -170,22 +178,24 @@ public:
         // U(1) = U(1) * cos(U(0));
 
         //filter servo angles, the more filtering, the bigger the delay
-       // U(0) = IIR(U(0), cd.angle_x, u_alpha);
-        //U(1) = IIR(U(1), cd.angle_y, u_alpha);
+        //  cd.angle_x = IIRF(U(0), cd.u(0), 0.08);
+        //  cd.angle_y = IIRF(U(1), cd.u(1), 0.08);
+         cd.angle_x = IIRF(U(0), cd.u(0), 0.08);
+         cd.angle_y = IIRF(U(1), cd.u(1), 0.08);
 
         //limit servo angles to +-15º
-        U(0) = limit(U(0), d2r * -8, d2r * 8);
-        U(1) = limit(U(1), d2r * -8, d2r * 8);
+        cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.08), d2r * -8, d2r * 8);
+        cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.08), d2r * -8, d2r * 8);
         U(3) = limit(U(3), 15.00f, 32.00f);
         
         //Actuate servos/edf motor 
-        sx.write(r2d * U(0));
-        sy.write(r2d * U(1));
+        writeXservo(r2d * cd.angle_x);
+        writeYservo(r2d * cd.angle_y);
         //act.edf.write(U(3));
 
         //Store debug/filtering data into struct
-        cd.angle_x = U(0);
-        cd.angle_y = U(1);
+
+        cd.u = U;
         cd.Tm = Tm;
         cd.e = error; 
         cd.Tx = Tx; 
@@ -237,8 +247,9 @@ public:
     {
         //map angle in degrees to pwm value for servo
         int pwmX{round( X_P1 * pow(angle,2) + X_P2 * angle + X_P3 ) };
+        cd.pwmx = pwmX;
         sx.writeMicroseconds(pwmX);
-        //cd.pwmx = pwmX;
+        
     }
 
     //write to Y servo
@@ -247,6 +258,7 @@ public:
         //map angle in degrees to pwm value for servo
         int pwmY{ round(Y_P1 * pow(angle,2) + Y_P2 * (angle) + Y_P3 ) };      // using polynomial regression coefficients to map tvc angle to pwm vals
         // int pwmY{ round(Y_P1 * pow(angle,2) - Y_P2 * (angle) + Y_P3 ) };      // true regression equations
+        cd.pwmy = pwmY;
         sy.writeMicroseconds(pwmY);
         //cd.pwmy = pwmY;
     }
@@ -286,11 +298,6 @@ public:
         //Serial.println("Vehicle is in SAFE-MODE... must restart....");
         while(1);
     }
-
-
-
-private:
-
     //TESTING VARIABLES //
     float int_gain{0};
     float int_z_gain{0};
@@ -321,10 +328,15 @@ private:
         return value;
     }
 
-    float IIR(float newSample, float prevOutput, float alpha)
+    float IIRF(float newSample, float prevOutput, float alpha)
     {
-        return ( (1.0f-alpha)*newSample + alpha * prevOutput);
+        return ( ( (1.0f-alpha)*newSample ) + ( alpha*prevOutput ) );
     }
+
+
+private:
+
+
 
 };
 

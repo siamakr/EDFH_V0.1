@@ -38,7 +38,14 @@ void loop() {
   {
     sensor_timer = millis();
     //sensor.sample_lidar();
-    control.hover(sensor.data.roll, sensor.data.pitch, sensor.data.yaw, sensor.data.gx, sensor.data.gy, sensor.data.gz, sensor.data.z, sensor.data.vz);
+    control.hover(sensor.data.roll, 
+                  sensor.data.pitch, 
+                  sensor.data.yaw, 
+                  sensor.data.gx, 
+                  sensor.data.gy, 
+                  sensor.data.gz, 
+                  sensor.data.z, 
+                  sensor.data.vz);
   }
 
   //..... Print Timer .....//
@@ -58,7 +65,7 @@ void loop() {
     {
         char text[250];
 
-        sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f    ",
+        sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %i, %i, %0.5f    ",
         r2d*sensor.data.roll,
         r2d*sensor.data.pitch,
         r2d*sensor.data.yaw,
@@ -70,6 +77,8 @@ void loop() {
         sensor.data.az,
         r2d*control.cd.angle_x,
         r2d*control.cd.angle_y,
+        control.cd.pwmx,
+        control.cd.pwmy,
         control.cd.Tm);
 
         Serial.print(text);
@@ -78,5 +87,7 @@ void loop() {
         Serial.print(sensor.data.gyroAccuracy);
         Serial.print(", ");
         Serial.print(sensor.data.quatAccuracy);
+        Serial.print(", ");
+        Serial.print(sensor.data.z);
         Serial.println(", ");
     }

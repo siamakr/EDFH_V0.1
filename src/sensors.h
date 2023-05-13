@@ -14,7 +14,7 @@
 using namespace BLA;
 
 //..... Defines .....//
-#define DT_MSEC 10.00f
+#define DT_MSEC 20.00f
 #define d2r (PI/180.00f)
 #define r2d (180.00f/PI)
 
