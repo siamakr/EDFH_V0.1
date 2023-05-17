@@ -3,10 +3,10 @@
 #ifndef _EDFH_SENSORS_H
 #define _EDFH_SENSORS_H
 
-#include "BNO080.h"
-#include "LIDARLite_v3HP.h"
 #include <Wire.h>
 #include <SPI.h>
+#include "BNO080.h"
+#include "LIDARLite_v3HP.h"
 #include <Math.h>
 #include <BasicLinearAlgebra.h>
 #include <stdint.h>
@@ -14,7 +14,8 @@
 using namespace BLA;
 
 //..... Defines .....//
-#define DT_MSEC 20.00f
+#define DT_MSEC 10.00f
+#define DT_SEC (DT_MSEC*1000)
 #define d2r (PI/180.00f)
 #define r2d (180.00f/PI)
 
@@ -35,13 +36,20 @@ typedef struct
     float gx, gy, gz;
     float ax, ay, az;
     float qi, qj, qk, qw;
-    float vz, z, zb; //this will be removed when imu_data_t is envoked
-    byte linAccuracy = 0;
-    byte gyroAccuracy = 0;
-    //byte magAccuracy = 0;
-    float quatRadianAccuracy = 0;
-    byte quatAccuracy = 0; 
+    float z; //this will be removed when imu_data_t is envoked
+    byte linAccuracy{0};
+    byte gyroAccuracy{0};
+    //byte magAccuracy{0};
+    float quatRadianAccuracy{0};
+    byte quatAccuracy{0}; 
 } fsm_data_t;
+
+typedef struct
+{
+    float x, y, z;
+    float vx, vy, vz; 
+
+} estimater_data_t;
 
 
 //...... Class Definition .....//
@@ -55,9 +63,50 @@ public:
 
     void init(void)
     {
+        //fsm_init();
+        lidar_init();
         fsm_init();
-        //lidar_init();
+
         //flow_init();
+    }
+        //... GARMIN LIDAR functions end ...//
+    void fsm_init(void)
+    {
+                //..... FSM305/BNO080 Init .....//
+        Serial.print("FSM Init start..."); 
+        //delay(300);
+
+        if (fsm.beginSPI(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin, 3000000) == false)
+        {
+            Serial.println("BNO080 over SPI not detected. Are you sure you have all 6 connections? Freezing...");
+            while(1);
+        }
+
+        fsm.calibrateAll();
+        fsm.enableLinearAccelerometer(DT_MSEC);  // m/s^2 no gravity
+        fsm.enableRotationVector(DT_MSEC);  // quat
+        //fsm.enableGameRotationVector(DT_MSEC);
+        fsm.enableGyro(DT_MSEC);  // rad/s
+        //fsm.enableGyroIntegratedRotationVector(DT_MSEC);
+        //fsm.enableMagnetometer(DT_MSEC);  // cannot be enabled at the same time as RotationVector (will not produce data)
+        
+        Serial.println("FSM Init Finished..."); 
+        delay(300);
+    }
+
+    void lidar_init(void)
+    {   
+        Wire.begin();
+        delay(100);
+        // "2" = short-range, fast speed
+        // "0" = normal operation 
+        garmin.configure(0, garminAddress);
+        delay(200);
+    }
+
+    void flow_init(void)
+    {
+
     }
 
     ///.......... FSM305/BNO080 FUNCTIONS ..........////
@@ -111,20 +160,21 @@ public:
             //... Linear Accel ...//
             fsm.getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
 
-            // data.ax = fsm.getAccelX();
-            // data.ay = fsm.getAccelY();
-            // data.az = fsm.getAccelZ();
+            // data.linAccuracy = fsm.getLinAccelAccuracy();
+            // data.ax = IIR(fsm.getLinAccelX(), data.ax, .30);
+            // data.ay = IIR(fsm.getLinAccelY(), data.ay, .30);
+            // data.az = IIR(fsm.getLinAccelZ(), data.az, .30);
 
             //... Gyro ...//
-            fsm.getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
+           // fsm.getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
 
             // data.gx = fsm.getFastGyroX();
             // data.gy = fsm.getFastGyroY();
             // data.gz = fsm.getFastGyroZ();
-
-            // data.gx = fsm.getGyroX();
-            // data.gy = fsm.getGyroY();
-            // data.gz = fsm.getGyroZ();
+            data.gyroAccuracy = fsm.getGyroAccuracy();
+            data.gx = IIR(fsm.getGyroX(), data.gx, .10);
+            data.gy = IIR(fsm.getGyroY(), data.gy, .10);
+            data.gz = IIR(fsm.getGyroZ(), data.gz, .10);
             
             //... Rotation Vector ...//
             fsm.getQuat(data.qi, data.qj, data.qk, data.qw, data.quatRadianAccuracy, data.quatAccuracy);
@@ -188,25 +238,24 @@ public:
         Serial.print(data.quatAccuracy);
         Serial.println(", ");
     }
-        void print_sensors(void)
+        void print_estimator(void)
     {
         char text[250];
 
-        sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, %0.5 ",
+        sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f ",
         r2d*data.roll,
         r2d*data.pitch,
         r2d*data.yaw,
-        data.qi,
-        data.qj,
-        data.qk,
-        data.qw,
-        r2d*data.gx,
-        r2d*data.gy,
-        r2d*data.gz,
+        data.z,
+        float(distance),
+        estimate.z,
+        estimate.vx,
+        estimate.vy,
+        estimate.vz,
         data.ax,
         data.ay,
-        data.az,
-        data.z);
+        data.az
+        );
 
         Serial.print(text);
         Serial.print(data.linAccuracy);
@@ -222,8 +271,8 @@ public:
     //... GARMIN LIDAR functions Begin ...//
     void sample_lidar(void)
     {
-        uint8_t newDistance = 0;
-        uint16_t distance{0};
+        //uint8_t newDistance = 0;
+        //uint16_t distance{0};
     
         if (garmin.getBusyFlag() == 0)
         {
@@ -231,61 +280,124 @@ public:
             garmin.takeRange();
 
             // Read new distance data from device registers
-            distance = garmin.readDistance();
+            data.z = (float)(garmin.readDistance()/100.00f);
 
             // Report to calling function that we have new data
-            newDistance = 1;
+         //   newDistance = 1;
         }
         //convert from cm to m
-        data.zb = (float)distance/100.00f;
-        data.z = data.zb; //remove this when rotate_to_world is being used
+       // data.z = (float)distance/100.00f;
     }
-    //... GARMIN LIDAR functions end ...//
-    void fsm_init(void)
+
+    void sampleLidar(void)
+{
+    distanceContinuous(&distance);
+   // float prev_distance{data.z};
+    //data.z = IIR((distance/100.00f) - LIDAR_MOUNT_OFFSET_M, prev_distance, 0.05);    // uncomment for body measurement 
+    data.z = distance/100.00f;    // uncomment for body measurement 
+
+}
+
+uint8_t distanceContinuous(uint16_t * distance)
+{
+    uint8_t newDistance = 0;
+
+    // Check on busyFlag to indicate if device is idle
+    // (meaning = it finished the previously triggered measurement)
+    if (garmin.getBusyFlag() == 0)
     {
-                //..... FSM305/BNO080 Init .....//
-        Serial.print("FSM Init start..."); 
-        //delay(300);
+        // Trigger the next range measurement
+        garmin.takeRange();
 
-        if (fsm.beginSPI(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin, 3000000) == false)
-        {
-            Serial.println("BNO080 over SPI not detected. Are you sure you have all 6 connections? Freezing...");
-            while(1);
-        }
+        // Read new distance data from device registers
+        *distance = garmin.readDistance();
 
-        fsm.calibrateAll();
-        fsm.enableLinearAccelerometer(DT_MSEC);  // m/s^2 no gravity
-        fsm.enableRotationVector(DT_MSEC);  // quat
-        //fsm.enableGameRotationVector(DT_MSEC);
-        fsm.enableGyro(DT_MSEC);  // rad/s
-        //fsm.enableGyroIntegratedRotationVector(DT_MSEC);
-        //fsm.enableMagnetometer(DT_MSEC);  // cannot be enabled at the same time as RotationVector (will not produce data)
-        
-        Serial.println("FSM Init Finished..."); 
-        delay(300);
+        // Report to calling function that we have new data
+        newDistance = 1;
     }
 
-    void lidar_init(void)
-    {   
-        Wire.begin();
-        // "2" = short-range, fast speed
-        // "0" = normal operation 
-        garmin.configure(0, garminAddress);
-    }
+    return newDistance;
+}
 
-    void flow_init(void)
-    {
 
-    }
+    void run_estimator(void){
+
+    /* ---- Sensor processing ---- */
+    float p[3] = {0}; // Position vector (z body to world)
+    //float v[3] = {0}; // Velocity vector (vx, vy to world)
+    float a[3] = {0}; // Acceleration vector (ax, ay, az to world)
+
+    // Rotate lidar measurement to world frame
+    p[2] = data.z;
+    rotate_to_world( p );
+
+    // Perform gyrocompensation on flow and rotate to world frame.
+    // v[0] = data.vx * p[2] + data.gy * p[2];
+    // v[1] = data.vy * p[2] - data.gx * p[2]; 
+    // rotate_to_world( v );
+
+    // Rotate acceleration to world frame
+    a[0] = data.ax; a[1] = data.ay; a[2] = data.az;
+    rotate_to_world( a );
+
+
+    /* ---- Estimation ---- */
+    // Fill input vector with acceleration
+    H.Fill(0);
+    Z.Fill(0);
+    U = { a[0], a[1], a[2] };
+
+    // Fill measurement vector with data
+   // if( data.status.pos == 1 ){
+        // H(0,0) = 1; H(1,1) = 1;
+        // Z(0) = data.x;
+        // Z(1) = data.y;
+    //}
+
+   // if( data.status.lidar == 1){
+        H(2,2) = 1;
+        Z(2) = p[2]; // p[2]: z
+    //}
+
+    // if( data.status.flow == 1){
+    //     H(3,3) = 1; H(4,4) = 1;
+    //     Z(3) = v[0]; // vx
+    //     Z(4) = v[1]; // vy
+    // }
+
+    // Prediction, based on previous state and current input
+    Xpre = A*X + B*U; 
+
+    // Update prediction with update using measurements 
+    X = Xpre + Kf*(Z - H*Xpre); 
+    
+    // Fill estimate struct with values (for telemetry and stuff)
+    estimate.x = X(0);
+    estimate.y = X(1);
+    estimate.z = X(2);
+    estimate.vx = X(3);
+    estimate.vy = X(4);
+    estimate.vz = X(5);
+
+    // Reset status (measurements has been used!)
+    // data.status.flow = 0;
+    // data.status.lidar = 0;
+    // data.status.imu = 0;
+    // data.status.pos = 0;
+}
+
+
+
     //..... Object Definition .....//
     fsm_data_t data;
-
-private:
+    estimater_data_t estimate;
     BNO080 fsm;
     LIDARLite_v3HP garmin;
+    uint16_t distance;
 
 
 
+private:
     float IIR(float newSample, float prevOutput, float alpha)
     {
         return ( (1.0f-alpha)*newSample + alpha * prevOutput);
@@ -313,6 +425,57 @@ private:
         vector[2] = out(2);
 
     }
+
+        // Estimator matrixes
+    Matrix<6,6> A = {   1,  0,  0,  DT_SEC, 0,  0,
+                        0,  1,  0,  0,  DT_SEC, 0,
+                        0,  0,  1,  0,  0,  DT_SEC,
+                        0,  0,  0,  1,  0,  0,
+                        0,  0,  0,  0,  1,  0, 
+                        0,  0,  0,  0,  0,  1 };
+
+    Matrix<6,3> B = {   0.5*pow(DT_SEC,2),  0,              0,         
+                        0,              0.5*pow(DT_SEC,2),  0,         
+                        0,              0,              0.5*pow(DT_SEC,2),  
+                        DT_SEC,             0,              0,         
+                        0,              DT_SEC,             0,         
+                        0,              0,              DT_SEC };
+ 
+    Matrix<6,6> H; 
+
+    // State vector
+    Matrix<6,1> X = {0,0,0,0,0,0};
+
+    // Prediction vector
+    Matrix<6,1> Xpre;
+
+    // Measurement vector
+    Matrix<6,1> Z = {0,0,0,0,0,0};
+
+    // Input vector
+    Matrix<3,1> U = {0,0,0};
+
+    // Estimator gain
+    /* Matrix<6,6> Kf = {  0.0001,    0.0000,    0.0000,    0.0095,   -0.0000,    0.0000,
+                        0.0000,    0.0001,   -0.0000,    0.0000,    0.0095,   -0.0000,
+                        0.0000,   -0.0000,    0.1547,    0.0000,   -0.0000,    0.0000,
+                        0.0000,    0.0000,    0.0000,    0.1057,   -0.0000,    0.0000,
+                       -0.0000,    0.0000,   -0.0000,   -0.0000,    0.1057,   -0.0000,
+                        0.0000,   -0.0000,    1.3001,    0.0000,   -0.0000,    0.0000  }; */
+
+    /* Matrix<6,6> Kf = {  0.0345,    0.0000,   0.0000,    0.0019,    0.0000,    0.0000,
+                        0.0000,    0.0345,   0.0000,    0.0000,    0.0019,    0.0000,
+                        0.0000,    0.0000,   0.0274,    0.0000,    0.0000,    0.0001,
+                        0.1495,    0.0000,   0.0000,    0.0216,    0.0000,    0.0000,
+                        0.0000,    0.1495,   0.0000,    0.0000,    0.0216,    0.0000,
+                        0.0000,    0.0000,   0.0767,    0.0000,    0.0000,    0.0004    }; */
+
+    Matrix<6,6> Kf = {  0.618520, 0.000000, 0.000000, 0.000330, 0.000000, 0.000000,
+                        0.000000, 0.618520, 0.000000, 0.000000, 0.000330, 0.000000,
+                        0.000000, 0.000000, 0.318880, 0.000000, 0.000000, 0.000420,
+                        0.162570, 0.000000, 0.000000, 0.131210, 0.000000, 0.000000,
+                        0.000000, 0.162570, 0.000000, 0.000000, 0.131210, 0.000000,
+                        0.000000, 0.000000, 4.190280, 0.000000, 0.000000, 0.045440   };
 
 };
 

@@ -87,7 +87,7 @@ using namespace BLA;
 typedef struct 
 {
     int pwmx, pwmy, pwmedf, pwmrw;
-    float angle_x, angle_y, Tm, Tx, Ty, Tz, Tlqr;
+    float angle_x, angle_xx, angle_y, angle_yy, Tm, Tx, Ty, Tz, Tedf;
     float trq_rw, trq_x, trq_y; 
     Matrix<8,1> e = {0.00f};
     Matrix<4,1> u = {0.00f};
@@ -119,8 +119,8 @@ public:
         Serial.println("initializing Servos..");
         init_servos();
         zero_servos();
-        delay(500);
         Serial.println("Servo Init done...");
+        delay(500);
 
         //... EDF initialization/priming ...//
         //Serial.println("EDF Prime begin ...");
@@ -169,35 +169,38 @@ public:
 
         float Tm = sqrt(pow(Tx,2) + pow(Ty,2) + pow(Tz,2));
         //save the value straight out of the controller before nomalizing. 
-        cd.Tlqr = U(3);
-        U(3) = Tm;
+        //U(3) = Tm;
 
-        //U(0) = asin(Tx/(Tm- pow(Ty,2)));
-        //U(1) = asin(Ty/Tm);
+        cd.angle_xx = asin(Tx/(Tm - pow(Ty,2)));
+        cd.angle_yy = asin(Ty/Tm);
 
         // U(1) = U(1) * cos(U(0));
 
         //filter servo angles, the more filtering, the bigger the delay
         //  cd.angle_x = IIRF(U(0), cd.u(0), 0.08);
         //  cd.angle_y = IIRF(U(1), cd.u(1), 0.08);
-         cd.angle_x = IIRF(U(0), cd.u(0), 0.08);
-         cd.angle_y = IIRF(U(1), cd.u(1), 0.08);
 
-        //limit servo angles to +-15º
-        cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.08), d2r * -8, d2r * 8);
-        cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.08), d2r * -8, d2r * 8);
-        U(3) = limit(U(3), 15.00f, 32.00f);
+
+        //limit servo angles to +-8º
+        //filtering and limiting in one line 
+        // cd.angle_x = limit(IIRF(cd.angle_xx, cd.u(0), 0.08), d2r * -8.00f, d2r * 8.00f);
+        // cd.angle_y = limit(IIRF(cd.angle_yy, cd.u(1), 0.08), d2r * -8.00f, d2r * 8.00f);
+
+        cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.08), d2r * -8.00f, d2r * 8.00f);
+        cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.08), d2r * -8.00f, d2r * 8.00f);
+        cd.Tedf = limit(Tm, 15.00f, 32.00f);
         
         //Actuate servos/edf motor 
         writeXservo(r2d * cd.angle_x);
         writeYservo(r2d * cd.angle_y);
-        //act.edf.write(U(3));
+        //act.edf.write(Tm);
 
         //Store debug/filtering data into struct
 
         cd.u = U;
-        cd.Tm = Tm;
         cd.e = error; 
+        cd.Tm = Tm;
+        
         cd.Tx = Tx; 
         cd.Ty = Ty; 
         cd.Tz = Tz;
@@ -215,8 +218,6 @@ public:
         delay(100);
         // rw.attach(RW_PIN);
         // delay(200);
-        zero_servos();
-        delay(1000);
     }
 
     void init_edf(void)
@@ -230,8 +231,8 @@ public:
     void zero_servos()
     {
         //Zero Servos
-        writeXservo(0);
-        writeYservo(0);
+        writeXservo(0.00);
+        writeYservo(0.00);
         delay(1000);
     }
 
@@ -239,7 +240,7 @@ public:
     {
         //go to 1500 and wait 5 seconds
         edf.writeMicroseconds(EDF_MIN_PWM+30);
-        delay(4000);
+        delay(5000);
     }
 
     //Write to X servo
@@ -248,8 +249,7 @@ public:
         //map angle in degrees to pwm value for servo
         int pwmX{round( X_P1 * pow(angle,2) + X_P2 * angle + X_P3 ) };
         cd.pwmx = pwmX;
-        sx.writeMicroseconds(pwmX);
-        
+        sx.writeMicroseconds(pwmX);  
     }
 
     //write to Y servo
@@ -257,10 +257,8 @@ public:
     {
         //map angle in degrees to pwm value for servo
         int pwmY{ round(Y_P1 * pow(angle,2) + Y_P2 * (angle) + Y_P3 ) };      // using polynomial regression coefficients to map tvc angle to pwm vals
-        // int pwmY{ round(Y_P1 * pow(angle,2) - Y_P2 * (angle) + Y_P3 ) };      // true regression equations
         cd.pwmy = pwmY;
         sy.writeMicroseconds(pwmY);
-        //cd.pwmy = pwmY;
     }
 
     //to write command to EDF ESC
@@ -268,9 +266,13 @@ public:
     {
         float omega{(Ft - RAD2N_P2)/RAD2N_P1};
         int pwm{round(omega * RAD2PWM_P1 + RAD2PWM_P2)};
-        //Serial.print(pwm);
-        edf.writeMicroseconds(pwm);
-        //cd.pwmedf = pwm; 
+        cd.pwmedf = pwm; 
+        edf.writeMicroseconds(pwm);   
+    }
+
+    void edf_shutdown(void)
+    {
+        edf.writeMicroseconds(EDF_OFF_PWM);
     }
 
     // to shut everything down if we go past max set angle
@@ -278,24 +280,16 @@ public:
     {
         if(r >= MAX_VEHICLE_ANGLE_DEG || r <= -MAX_VEHICLE_ANGLE_DEG || p >= MAX_VEHICLE_ANGLE_DEG || p <= -MAX_VEHICLE_ANGLE_DEG)
         {
-            writeEDF(0);
-            writeXservo(0);
-            writeYservo(0);
-            Serial.println("Max attitude angle reached....  ");
-            Serial.println("Vehicle is in SAFE-MODE... must restart....");
-            while(1);
+            suspend();
         }
     }
 
     void suspend(void)
     {
-        //turn off EDF motor
-        writeEDF(0);
-        //zero TVC actuators.
-        writeXservo(0);
-        writeYservo(0);
-        //Serial.println("Max attitude angle reached....  ");
-        //Serial.println("Vehicle is in SAFE-MODE... must restart....");
+        edf_shutdown();
+        zero_servos();
+        Serial.println("Max attitude angle reached....  ");
+        Serial.println("Vehicle is in SAFE-MODE... must restart....");
         while(1);
     }
     //TESTING VARIABLES //
