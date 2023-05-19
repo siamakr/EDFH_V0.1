@@ -46,6 +46,7 @@ void loop() {
   {
     sensor_timer = millis();
     sensor.sample_lidar();
+    sensor.run_estimator();
     ///*
     control.hover(sensor.data.roll, 
                   sensor.data.pitch, 
@@ -71,8 +72,8 @@ void loop() {
   {
     print_timer = millis();
     //sensor.print_fsm_calibration();
-    print_control_imu();
-    //sensor.print_estimator();
+    //print_control_imu();
+    sensor.print_estimator();
 
   }
   
@@ -99,7 +100,7 @@ void print_control_imu(void)
     r2d*control.cd.angle_y,
     r2d*control.cd.angle_yy,
     control.cd.pwmy,
-    control.cd.Tm,
+    control.cd.Tedf,
     control.cd.pwmedf
   );
 
