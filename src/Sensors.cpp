@@ -300,11 +300,23 @@
 }
     void Sensors::rotate_to_world( float * vector )
     {
+        //*************************** PROBLEM IS HERE ***************************
+
+        //When using dummy variables for pqu, it works!
+        //this means data.roll etc. are not being read into pqu for some reason
+        //using "distance" i confirmed that data isn't being read into this 
+        //function for some reason 
+        //  float p = 0.23;
+        //  float q = -0.23;
+        //  float u = 0.01;
 
          float p = data.roll;
          float q = data.pitch;
          float u = data.yaw;
-        distance = p;
+
+        //testing public/private
+        //distance = p;
+        //distance = data.roll;
 
         Matrix<3,1> in = { vector[0], vector[1], vector[2] };
         Matrix<3,1> out = {0,0,0};
