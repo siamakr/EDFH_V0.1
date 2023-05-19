@@ -191,8 +191,8 @@ public:
         cd.Tedf = limit(Tm, 15.00f, 32.00f);
         
         //Actuate servos/edf motor 
-        writeXservo(r2d * cd.angle_x);
-        writeYservo(r2d * cd.angle_y);
+        writeXservo(r2d * -cd.angle_y);
+        writeYservo(r2d * -cd.angle_x);
         //act.edf.write(Tm);
 
         //Store debug/filtering data into struct

@@ -15,7 +15,7 @@ using namespace BLA;
 
 //..... Defines .....//
 #define DT_MSEC 10.00f
-#define DT_SEC (DT_MSEC*1000)
+#define DT_SEC (DT_MSEC/1000)
 #define d2r (PI/180.00f)
 #define r2d (180.00f/PI)
 
@@ -55,7 +55,15 @@ typedef struct
 //...... Class Definition .....//
 class Sensors
 {    
+    //..... Object Definition .....//
+
+    BNO080 fsm;
+    LIDARLite_v3HP garmin;
+    uint16_t distance;
+
 public:
+            fsm_data_t data;
+    estimater_data_t estimate;
 
     Sensors(void){
 
@@ -186,9 +194,9 @@ public:
 
 
             //... Euler Angle Representation ...//
-            data.roll = fsm.getRoll();
-            data.pitch = fsm.getPitch();
-            data.yaw = fsm.getYaw();    
+            this->data.roll = fsm.getRoll();
+            this->data.pitch = fsm.getPitch();
+            this->data.yaw = fsm.getYaw();    
 
         }
     }
@@ -289,37 +297,6 @@ public:
        // data.z = (float)distance/100.00f;
     }
 
-    void sampleLidar(void)
-{
-    distanceContinuous(&distance);
-   // float prev_distance{data.z};
-    //data.z = IIR((distance/100.00f) - LIDAR_MOUNT_OFFSET_M, prev_distance, 0.05);    // uncomment for body measurement 
-    data.z = distance/100.00f;    // uncomment for body measurement 
-
-}
-
-uint8_t distanceContinuous(uint16_t * distance)
-{
-    uint8_t newDistance = 0;
-
-    // Check on busyFlag to indicate if device is idle
-    // (meaning = it finished the previously triggered measurement)
-    if (garmin.getBusyFlag() == 0)
-    {
-        // Trigger the next range measurement
-        garmin.takeRange();
-
-        // Read new distance data from device registers
-        *distance = garmin.readDistance();
-
-        // Report to calling function that we have new data
-        newDistance = 1;
-    }
-
-    return newDistance;
-}
-
-
     void run_estimator(void){
 
     /* ---- Sensor processing ---- */
@@ -385,31 +362,13 @@ uint8_t distanceContinuous(uint16_t * distance)
     // data.status.imu = 0;
     // data.status.pos = 0;
 }
-
-
-
-    //..... Object Definition .....//
-    fsm_data_t data;
-    estimater_data_t estimate;
-    BNO080 fsm;
-    LIDARLite_v3HP garmin;
-    uint16_t distance;
-
-
-
-private:
-    float IIR(float newSample, float prevOutput, float alpha)
-    {
-        return ( (1.0f-alpha)*newSample + alpha * prevOutput);
-    }
-
-
     void rotate_to_world( float * vector )
     {
 
-        float p = data.roll;
-        float q = data.pitch;
-        float u = data.yaw;
+         float p = this->data.roll;
+         float q = this->data.pitch;
+         float u = this->data.yaw;
+        distance = p;
 
         Matrix<3,1> in = { vector[0], vector[1], vector[2] };
         Matrix<3,1> out = {0,0,0};
@@ -425,6 +384,20 @@ private:
         vector[2] = out(2);
 
     }
+
+
+
+
+
+
+private:
+    float IIR(float newSample, float prevOutput, float alpha)
+    {
+        return ( (1.0f-alpha)*newSample + alpha * prevOutput);
+    }
+
+
+
 
         // Estimator matrixes
     Matrix<6,6> A = {   1,  0,  0,  DT_SEC, 0,  0,
