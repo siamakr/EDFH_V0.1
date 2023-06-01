@@ -3,6 +3,7 @@
 #ifndef _EDFH_CONTROLLER_H
 #define _EDFH_CONTROLLER_H
 
+#include "Actuator.h"
 #include "Servo.h"
 #include <Math.h>
 #include <BasicLinearAlgebra.h>
@@ -98,10 +99,8 @@ typedef struct
 //...... Class Definition .....//
 class Controller
 {
-    
-
 public:
-
+    Actuator act;
     controller_data_t cd; 
 
 
@@ -114,6 +113,9 @@ public:
 
     void actuate( void );
 
+    void actuate_servos(void);
+
+    void actuate_edf(void);
 
     void init_servos(void);
 

@@ -8,28 +8,33 @@
     
     void Controller::init(void)
     {
-        //... Servo Initialization ...//
-        Serial.println("initializing Servos..");
-        init_servos();
-        zero_servos();
-        Serial.println("Servo Init done...");
-        delay(500);
+        // //... Servo Initialization ...//
+        // Serial.println("initializing Servos..");
+        // init_servos();
+        // zero_servos();
+        // Serial.println("Servo Init done...");
+        // delay(500);
 
-        //... EDF initialization/priming ...//
-        //Serial.println("EDF Prime begin ...");
-        //act.init_edf();
-        //act.prime_edf();
-        //Serial.println("EDF Priming done... ");
+        act.init();
+
+        //Initialize individually 
+        act.init_servos();
+        act.zero_servos();
+
+        act.init_edf();
+        act.edf_shutdown();
+        
+
         
     }
 
     void Controller::hover(float r, float p, float y, float gx, float gy, float gz, float z, float vz)
     {
         //Envoke Matricies on the function stack and initialize them
-        Matrix<4,1> U = {0.00,0.00,0.00,0.00}; // Output vector
+        Matrix<4,1> U = {0.00,0.00,0.00,0.00}; // Control Vector
         Matrix<8,1> error {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0}; // State error vector
-        Matrix<8,1> REF = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};
-        Matrix<8,1> Xs = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};
+        Matrix<8,1> REF = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};    //Desired Reference
+        Matrix<8,1> Xs = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};     //State Vector
 
           //load state vecotr
         Xs = {r, p, y, gx, gy, gz, 0, 0};
@@ -106,9 +111,20 @@
     {
         //angles are switched due to calibration imu axis change, will change this
         //in the polynomial regression definition of the servo angles to tvc angle
-        writeXservo(r2d * -cd.angle_y);
-        writeYservo(r2d * -cd.angle_x);
-        writeEDF(cd.Tedf);
+        act.writeXservo(r2d * -cd.angle_y);
+        act.writeYservo(r2d * -cd.angle_x);
+        act.writeEDF(cd.Tedf);
+    }
+
+    void Controller::actuate_servos(void)
+    {
+        act.writeXservo(r2d * -cd.angle_y);
+        act.writeYservo(r2d * -cd.angle_x);
+    }
+
+    void Controller::actuate_edf(void)
+    {
+        act.writeEDF(cd.Tedf);
     }
 
     void Controller::init_servos(void)

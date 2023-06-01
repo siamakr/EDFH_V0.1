@@ -63,7 +63,6 @@ void loop() {
   if(millis() - estimator_timer >= DT_MSEC *1.50f )
   {
     estimator_timer = millis();
-
     //sensor.run_estimator();
   }
 
@@ -71,7 +70,7 @@ void loop() {
   if(millis() - print_timer >= (DT_MSEC) * 4 ) //DT_MSEC * 4 = 40mS
   {
     print_timer = millis();
-    //sensor.print_fsm_calibration();
+
     //print_control_imu();
     sensor.print_estimator();
 
