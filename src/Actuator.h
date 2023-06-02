@@ -106,6 +106,8 @@ public:
     //Shuts EDF motor down 
     void edf_shutdown(void);
 
+    bool servo_dance_x(float start_angle);
+
 
     //... Actuation Functions ...//
     
