@@ -111,15 +111,15 @@
     {
         //angles are switched due to calibration imu axis change, will change this
         //in the polynomial regression definition of the servo angles to tvc angle
-        act.writeXservo(r2d * -cd.angle_y);
-        act.writeYservo(r2d * -cd.angle_x);
-        act.writeEDF(cd.Tedf);
+        act.writeXservo((float) r2d * -cd.angle_y);
+        act.writeYservo((float) r2d * -cd.angle_x);
+        act.writeEDF((float) cd.Tedf);
     }
 
     void Controller::actuate_servos(void)
     {
-        act.writeXservo(r2d * -cd.angle_y);
-        act.writeYservo(r2d * -cd.angle_x);
+        act.writeXservo((float) r2d * -cd.angle_y);
+        act.writeYservo((float) r2d * -cd.angle_x);
     }
 
     void Controller::actuate_edf(void)

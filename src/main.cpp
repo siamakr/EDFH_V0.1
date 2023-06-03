@@ -3,9 +3,17 @@
 #include "Controller.h"
 
 
+
+
+//#define STATEMACHINE
+#define QUICKTESTENV
+
 //Envoking Class objects 
 Sensors sensor; 
 Controller control; 
+
+
+
 
 //..... State Machine Vars .....// 
 //... Timing Vars ...//
@@ -16,6 +24,7 @@ bool is_calibrated{false};
 
 void print_control_imu(void);
 
+#ifdef STATEMACHINE
 void setup() {
     //..... Begins .....//
   Serial.begin(115200);
@@ -35,6 +44,7 @@ void setup() {
 
 
 }
+
 
 void loop() {
   //sample BNO080 as fast as possible allowing for .isAvailable() to catch 
@@ -79,6 +89,9 @@ void loop() {
   
 }
 
+#endif
+
+//TODO: This function should go in Controller!!!
 void print_control_imu(void)
 {
   char text[250];
@@ -113,3 +126,34 @@ void print_control_imu(void)
   Serial.print(sensor.data.z);
   Serial.println(", ");
 }
+
+
+#ifdef QUICKTESTENV
+
+#include "Actuator.h" 
+
+Actuator a;
+bool flag{false};
+
+void setup(){
+  Serial.begin(115200);
+  a.init_servos();
+}
+
+void loop(){
+    a.servo_dance_x(12.00f, 15);
+   // delay(2000);
+    a.servo_dance_x(10.00f, 10);
+   // delay(2000);
+    a.servo_dance_x(8.00f, 7);
+    a.servo_dance_x(7.00f, 5);
+    a.servo_dance_x(5.00f, 3);
+    a.servo_dance_x(3.00f, 2);
+    a.servo_dance_x(2.00f, 1);
+    a.zero_servos();
+   // delay(2000);
+
+
+    delay(10000);
+}
+#endif

@@ -63,30 +63,32 @@ void Actuator::prime_edf(int delay_time_ms)
     delay(delay_time_ms);
 }
 
-bool Actuator::servo_dance_x(float max_angle)
+bool Actuator::servo_dance_x(float max_angle, int delay_time_ms)
 {
     //max_angle refers to the radius that parametrization 
     //of the circle to be "drawn" by the tip of the TVC motor
     //Ex. max_angle = 5 referes that the maximum TVC angle that 
     //is actuated by the servos is 5 degrees.
 
-    writeYservo(max_angle);
+    // writeYservo(max_angle);
+    // delay(500);
     
     for(int i{0}; i <= 360; i++)
     {
-        writeXservo(max_angle * sin( (float) i ));
-        writeYservo(max_angle * cos( (float) i ));
+        writeXservo((float) max_angle * (float) sin( i * d2r) );
+        writeYservo((float) max_angle * (float) cos( i * d2r ) );
         
         //for debugging/testing
-        Serial.print(max_angle * sin( (float) i ));
+        Serial.print(max_angle * sin( (float) i * d2r ));
         Serial.print("\t");
-        Serial.println(max_angle * cos( (float) i ));
+        Serial.println(max_angle * cos( (float) i * d2r ));
 
-
-        delay(10);
+        delay(delay_time_ms);
     }
     
-    delay(1000);
+    // delay(1000);
+
+    // zero_servos();
 
     return true;
 }
