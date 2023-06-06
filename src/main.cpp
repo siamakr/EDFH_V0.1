@@ -5,8 +5,8 @@
 
 
 
-//#define STATEMACHINE
-#define QUICKTESTENV
+#define STATEMACHINE
+//#define QUICKTESTENV
 
 //Envoking Class objects 
 Sensors sensor; 
@@ -18,6 +18,7 @@ Controller control;
 //..... State Machine Vars .....// 
 //... Timing Vars ...//
 float sensor_timer, print_timer, estimator_timer;
+float mst{0.00f};       //Mission Start Timer
 //... Flags ...//
 bool is_calibrated{false};  
 
@@ -26,21 +27,47 @@ void print_control_imu(void);
 
 #ifdef STATEMACHINE
 void setup() {
-    //..... Begins .....//
+  //   //..... Begins .....//++++++++++++++++++++++++++++++++++++++++++++++++++++
+  // Serial.begin(115200);
+  // //Wire.begin();
+  // Serial.print("setup started");
+  // //.......... Inits ...........//
+  // //allocate sensor object holding all sensor func/vars
+  // //sensor.init();     //initializes all sensors at once
+  // control.init();
+  // delay(100);
+  // //first function call
+  // sensor.init();     //initializes all sensors at once
+  // //sensor.fsm_init();
+  // //sensor.lidar_init();
+  // delay(100);
+
+
   Serial.begin(115200);
-  //Wire.begin();
-  Serial.print("setup started");
-  //.......... Inits ...........//
-  //allocate sensor object holding all sensor func/vars
-  //sensor.init();     //initializes all sensors at once
-  control.init();
+  Serial.println("Serial Started...");
+
+  //Servo inits
+  control.act.init_servos();
+  control.act.init_edf();
   delay(100);
-  //first function call
-  sensor.init();     //initializes all sensors at once
-  //sensor.fsm_init();
-  //sensor.lidar_init();
+  control.act.zero_servos();
   delay(100);
-  
+
+  //Sensors init
+  sensor.lidar_init();
+  delay(100);
+  sensor.fsm_init();
+  delay(100);
+
+  //EDF init + prime
+  // control.act.init_edf();
+  // delay(100);
+   control.act.prime_edf(5);
+
+  //begin mst timer
+  mst = millis();
+
+
 
 
 }
@@ -49,14 +76,15 @@ void setup() {
 void loop() {
   //sample BNO080 as fast as possible allowing for .isAvailable() to catch 
   //when imu is not ready with new readings. 
-  
   sensor.sample_fsm();
+  
   //..... Sensor Timer .....//
   if(millis() - sensor_timer >= DT_MSEC)
   {
     sensor_timer = millis();
+  
     sensor.sample_lidar();
-    sensor.run_estimator();
+    //sensor.run_estimator();
     ///*
     control.hover(sensor.data.roll, 
                   sensor.data.pitch, 
@@ -67,22 +95,27 @@ void loop() {
                   sensor.estimate.z, 
                   sensor.estimate.vz);
     //*/
+
+    //control.hover(sensor.data, sensor.estimate);
   }
 
   //..... Estimator Timer .....//   
-  if(millis() - estimator_timer >= DT_MSEC *1.50f )
+  if(millis() - estimator_timer >= DT_MSEC )
   {
     estimator_timer = millis();
     //sensor.run_estimator();
+    //control.actuate();
+    control.actuate_servos();
+    //control.actuate_edf()
   }
 
   //..... Print Timer .....//
-  if(millis() - print_timer >= (DT_MSEC) * 4 ) //DT_MSEC * 4 = 40mS
+  if(millis() - print_timer >= (DT_MSEC)  ) //DT_MSEC * 4 = 40mS
   {
     print_timer = millis();
 
-    //print_control_imu();
-    sensor.print_estimator();
+    print_control_imu();
+    //sensor.print_estimator();
 
   }
   
@@ -141,19 +174,27 @@ void setup(){
 }
 
 void loop(){
-    a.servo_dance_x(12.00f, 15);
-   // delay(2000);
-    a.servo_dance_x(10.00f, 10);
-   // delay(2000);
-    a.servo_dance_x(8.00f, 7);
-    a.servo_dance_x(7.00f, 5);
-    a.servo_dance_x(5.00f, 3);
-    a.servo_dance_x(3.00f, 2);
-    a.servo_dance_x(2.00f, 1);
-    a.zero_servos();
-   // delay(2000);
+  //   a.servo_dance_x(12.00f, 15);
+  //  // delay(2000);
+  //   a.servo_dance_x(10.00f, 10);
+  //  // delay(2000);
+  //   a.servo_dance_x(8.00f, 7);
+  //   a.servo_dance_x(7.00f, 5);
+  //   a.servo_dance_x(5.00f, 3);
+  //   a.servo_dance_x(3.00f, 2);
+  //   a.servo_dance_x(2.00f, 1);
+  //   a.zero_servos();
+  //  // delay(2000);
 
 
-    delay(10000);
+  //   delay(10000);
+
+  while(a.step_response_x_servo(5));
+  delay(1000); 
+  a.zero_servos();
+  while(a.step_response_y_servo(5));
+  delay(1000);
+  a.zero_servos();
+
 }
 #endif

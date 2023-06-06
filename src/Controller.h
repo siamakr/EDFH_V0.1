@@ -5,6 +5,7 @@
 
 #include "Actuator.h"
 #include "Servo.h"
+#include "Sensors.h"
 #include <Math.h>
 #include <BasicLinearAlgebra.h>
 #include <stdint.h>
@@ -17,59 +18,10 @@
 
 //// Vehicle Specs + General Constants
 #define COM_TO_TVC 0.1335
-#define MASS 3.008                    //Kg
+#define MASS 2.757                    //Kg
 #define G 9.87
 
-//// Vehicle's Minimums and Maximums 
-#define MAX_ANGLE_SERVO 8.00f           //Deg
-#define SERVO_MAX_SEC_PER_DEG 0.003333f      //dt/.003333 |(dt=0.1) = 3º
-#define SERVO_MAX_SEC_PER_RAD 0.0095496f      //dt/.003333 |(dt=0.1) = 3º
-#define SERVO_MAX_DEGREE_PER_DT 1.2
-#define MAX_VEHICLE_ANGLE_DEG 35.00f
-#define DEADBAND_ANGLE_DEG 0.001f
-#define SERVO_ANG_TO_TVC_ANG 3.00f
 
-//// EDF Params 
-#define EDF_OFF_PWM 900                 //uSec
-#define EDF_MIN_PWM 1500                //uSec
-#define EDF_MAX_PWM 2000                //uSec
-#define EDF_MAX_SUSTAINED_PWM 1730      //uSec
-#define EDF_IDLE_PWM 1600               //uSec
-
-//VALUES SET FOR +-15º GIMBAL ANGLE FOR BOTH X AND Y
-#define SERVO_X_CENTER_US 1422
-#define SERVO_Y_CENTER_US 1576
-#define SERVO_X_MIN_US 1026
-#define SERVO_Y_MIN_US 1026
-#define SERVO_X_MAX_US 1900
-#define SERVO_Y_MAX_US 1900
-
-////////// Version 4 //////////
-#define X_P1 0.1174
-#define X_P2 33.20
-#define X_P3 1422
-
-#define Y_P1 -0.2077
-#define Y_P2 -26.89
-#define Y_P3 1576
-
-////////// Version 3 //////////
-//#define X_P1 0.1243
-//#define X_P2 33.11
-//#define X_P3 1428
-//
-//#define Y_P1 -0.2112
-//#define Y_P2 -26.83
-//#define Y_P3 1596
-
-//EDF MOTOR RPM TO THRUST TO PWM TRANSFORMATORS
-#define RAD2N_P1 0.018566536813619f    //Newtons to radians/s 
-#define RAD2N_P2 -22.506778362213f     //Newtons to Radians/s
-#define RAD2PWM_P1 0.2719786528784f    //Radians/s to PWM(us)  
-#define RAD2PWM_P2 1010.29617153703f   //Radians/s to PWM(us)
-#define RPM_TO_OMEGA (2.0f*PI/60.0f)        //RPM to Radians/s
-#define OMEGA_TO_RPM (60.0f/(2.0f*PI))      //Radians/s to RPM
-#define GRAMS_TO_NEWTONS (9.80f / 1000.00f) //Grams(g) to Newtons(N)
 
 //MASS-MOMENT-OF-INERTIA OF VEHICLE
 #define V_JXX 0.0058595f
@@ -95,19 +47,36 @@ typedef struct
     //add more data points as needed for debugging
 }controller_data_t;
 
+typedef enum{
+    CONTROL_STATUS_STATIONARY = 0,
+    CONTROL_STATUS_FLYING,
+    CONTROL_STATUS_LANDING,
+} control_status_t; 
+
+typedef enum{
+    SETPOINT_X = 0,
+    SETPOINT_Y,
+    SETPOINT_Z,
+    SETPOINT_ROLL,
+    SETPOINT_PITCH,
+    SETPOINT_YAW
+} control_setpoint_t;
+
 
 //...... Class Definition .....//
 class Controller
 {
 public:
     Actuator act;
-    controller_data_t cd; 
+    controller_data_t cd;
+    control_setpoint_t setpoint; 
 
 
     Controller( void );
     
     void init(void);
 
+    void hover(fsm_data_t id, estimater_data_t ed);
 
     void hover(float r, float p, float y, float gx, float gy, float gz, float z, float vz);
 
@@ -117,48 +86,19 @@ public:
 
     void actuate_edf(void);
 
-    void init_servos(void);
+    void set_reference(control_setpoint_t cs, float value);
 
 
-    void init_edf(void);
-
-
-    void zero_servos();
-
-
-    void prime_edf(void);
-
-
-
-    void edf_shutdown(void);
-
-
-    // to shut everything down if we go past max set angle
-    void emergency_check(float r, float p);
-
-
-    void suspend(void);
 
 
 private:
 
-    Servo sx; 
-    Servo sy; 
-    Servo edf;
-    //Servo rw;
-    
-    //Write to X servo
-    void writeXservo(float angle);
-
-    //write to Y servo
-    void writeYservo(float angle);
-
-    //to write command to EDF ESC
-    void writeEDF(float Ft);
 
     float limit(float value, float min, float max);
 
     float IIRF(float newSample, float prevOutput, float alpha);
+
+    Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};    //Desired Reference
 
     //TESTING VARIABLES //
     float int_gain{0};

@@ -160,3 +160,43 @@ void Actuator::suspend(void)
     zero_servos();
     while(1);       //This should return the state machine into hold state
 }
+
+bool Actuator::step_response_x_servo(int angle_deg)
+{
+    zero_servos();
+    delay(1000);
+
+    writeXservo(angle_deg);
+    delay(1000);
+
+    int start_pwm{ad.pwmx};
+    float timer{millis()};
+    writeXservo(-angle_deg); 
+
+    while(ad.pwmx >= -1 * start_pwm);
+    float elapsed_time = millis() - timer;
+
+    Serial.println(elapsed_time);
+
+    return true;
+}
+
+bool Actuator::step_response_y_servo(int angle_deg)
+{
+    zero_servos();
+    delay(1000);
+
+    writeYservo(angle_deg);
+    delay(1000);
+
+    int start_pwm{ad.pwmy};
+    float timer{millis()};
+    writeYservo(-angle_deg); 
+
+    while(ad.pwmy >= -1 * start_pwm);
+    float elapsed_time = millis() - timer;
+
+    Serial.println(elapsed_time);
+
+    return true;
+}

@@ -101,12 +101,12 @@
         {
             //..... Sample IMU .....//
             //... Linear Accel ...//
-            fsm.getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
+            //fsm.getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
 
-            // data.linAccuracy = fsm.getLinAccelAccuracy();
-            // data.ax = IIR(fsm.getLinAccelX(), data.ax, .30);
-            // data.ay = IIR(fsm.getLinAccelY(), data.ay, .30);
-            // data.az = IIR(fsm.getLinAccelZ(), data.az, .30);
+            data.linAccuracy = fsm.getLinAccelAccuracy();
+            data.ay = IIR(fsm.getLinAccelX(), data.ax, .30);
+            data.ax = IIR(fsm.getLinAccelY(), data.ay, .30);
+            data.az = IIR(fsm.getLinAccelZ(), data.az, .30);
 
             //... Gyro ...//
            // fsm.getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
@@ -115,8 +115,8 @@
             // data.gy = fsm.getFastGyroY();
             // data.gz = fsm.getFastGyroZ();
             data.gyroAccuracy = fsm.getGyroAccuracy();
-            data.gx = IIR(fsm.getGyroX(), data.gx, .10);
-            data.gy = IIR(fsm.getGyroY(), data.gy, .10);
+            data.gy = IIR(fsm.getGyroX(), data.gx, .10);
+            data.gx = IIR(fsm.getGyroY(), data.gy, .10);
             data.gz = IIR(fsm.getGyroZ(), data.gz, .10);
             
             //... Rotation Vector ...//
@@ -129,8 +129,8 @@
 
 
             //... Euler Angle Representation ...//
-            data.roll = fsm.getRoll();
-            data.pitch = fsm.getPitch();
+            data.pitch = fsm.getRoll();
+            data.roll = fsm.getPitch();
             data.yaw = fsm.getYaw();    
 
         }

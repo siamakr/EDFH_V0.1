@@ -43,9 +43,10 @@
 #define EDF_IDLE_PWM 1600               //uSec
 
 //EDF Regression Polynomial Coeffs
-#define EDF_P1 -.00025151
-#define EDF_P2 0.96511
-#define EDF_P3 -891.54
+//EDF Regression Polynomial Coeffs
+#define EDF_P1 0.2689
+#define EDF_P2 -1.5320
+#define EDF_P3 1596.5
 
 //VALUES SET FOR +-15º GIMBAL ANGLE FOR BOTH X AND Y
 #define SERVO_X_CENTER_US 1422          //µs
@@ -77,11 +78,20 @@
 
 
 //  -.00025151   0.96511  -891.54
-//Config params 
+//Physical Constraints
 #define MAX_VEHICLE_ANGLE_DEG 35.00f
+#define MAX_TVC_ANGLE_DEG 8.00f
+#define MAX_EDF_THRUST_NEWTONS 31.00f
+
 
 #define d2r (PI/180.00f)
 #define r2d (180.00f/PI)
+
+template<typename T>
+T clamp( T Value, T Min, T Max)
+{
+  return (Value < Min)? Min : (Value > Max)? Max : Value;
+}
 
 typedef struct 
 {
@@ -149,6 +159,10 @@ public:
     //a restart will be required before implementation of 
     //state machine
     void suspend(void);
+
+    bool step_response_x_servo(int angle_deg);
+
+    bool step_response_y_servo(int angle_deg);
 
 private:
 
