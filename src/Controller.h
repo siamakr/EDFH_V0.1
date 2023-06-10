@@ -19,8 +19,9 @@
 //// Vehicle Specs + General Constants
 #define COM_TO_TVC 0.1335
 #define MASS 2.757                    //Kg
+#define MAX_TVC_DEFLECTION_DEG 8.00f
+#define MAX_TVC_DEFLECTION_RAD (d2r * MAX_TVC_DEFLECTION_DEG)
 #define G 9.87
-
 
 
 //MASS-MOMENT-OF-INERTIA OF VEHICLE
@@ -43,6 +44,7 @@ typedef struct
     float angle_x, angle_xx, angle_y, angle_yy, Tm, Tx, Ty, Tz, Tedf;
     float trq_rw, trq_x, trq_y; 
     Matrix<8,1> e = {0.00f};
+    Matrix<12,1> e_int = {0.00f};
     Matrix<4,1> u = {0.00f};
     //add more data points as needed for debugging
 }controller_data_t;
@@ -70,21 +72,25 @@ public:
     Actuator act;
     controller_data_t cd;
     control_setpoint_t setpoint; 
+        Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};    //Desired Reference
+    Matrix<12,1> SP_hover_int = {0.00};    //Desired Reference
 
 
     Controller( void );
     
     void init(void);
 
-    void hover(fsm_data_t id, estimater_data_t ed);
+    void edf_startup(int seconds);
 
-    void hover(float r, float p, float y, float gx, float gy, float gz, float z, float vz);
+    void lqr(float r, float p, float y, float gx, float gy, float gz, float z, float vz);
+    
+    void lqr_int(float r, float p, float y, float gx, float gy, float gz, float z, float vz);
 
-    void actuate( void );
+    void actuate( float angle_x_rad, float angle_y_rad, float thrust_force_newton );
 
-    void actuate_servos(void);
+    void actuate_servos(float angle_x_rad, float angle_y_rad);
 
-    void actuate_edf(void);
+    void actuate_edf( float thrust_force_newton );
 
     void set_reference(control_setpoint_t cs, float value);
 
@@ -98,17 +104,31 @@ private:
 
     float IIRF(float newSample, float prevOutput, float alpha);
 
-    Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};    //Desired Reference
+    //LQR Gains 
+    //Use these for gain scheduling //
+    float _gain_roll{0.5100};               //ROLL GAIN
+    float _gain_pitch{_gain_roll};          //PITCH GAIN
+    float _gain_yaw{.0316};                 //YAW GAIN
 
-    //TESTING VARIABLES //
-    float int_gain{0};
-    float int_z_gain{0};
-    float n_gain_x{0.5100};     //ROLL GAIN
-    float n_gain_y{0.5100};     //PITCH GAIN
-    float g_gain_x{0.1230};     //GX GAIN
-    float g_gain_y{0.1230};     //GY GAIN 
-    float g_alpha{0.18};        //GYROSCOPE FILTER ALPHA
-    float u_alpha{0.05};        //SERVO ACTUATOR SIGNAL FILTER ALPHA 
+    float _gain_gx{0.1230};                 //GX GAIN
+    float _gain_gy{_gain_gx};               //GY GAIN 
+    float _gain_gz{.0561};                  //GZ GAIN
+
+    float _gain_vz{5.42};                   //ALT VELOCITY
+    float _gain_z{3.0942};                  //ALTITUDE
+    float _gain_z_int{};                    //ALTITUDE INTEGRAL GAIN
+
+    float _gain_roll_int{};                 //ROLL INTEGRAL GAIN
+    float _gain_pitch_int{};                //PITCH INTEGRAL GAIN       
+    float _gain_yaw_int{};                  //YAW INTEGRAL GAIN
+
+    float _int_bound_att{d2r * 4.00f};
+    float _int_bound_alt{0.850f};
+
+
+    //FILTER PARAMS
+    float _alpha_gyro{0.18};                //GYROSCOPE FILTER ALPHA
+    float _alpha_actuator{0.05};            //SERVO ACTUATOR SIGNAL FILTER ALPHA 
 
     float xsetpoint{0.00f};
     float ysetpoint{0.00f};
@@ -116,10 +136,25 @@ private:
     float tinterval2{1.25f};
 
 
-    Matrix<4,8> K = { n_gain_x,   -0.0000,    0.0000,  g_gain_x,   -0.0000,    0.0000,    0.0000,    0.0000,
-                        0.0000,  n_gain_y,    0.0000,   -0.0000,  g_gain_y,   -0.0000,    0.0000,    0.0000,
-                       -0.0000,    0.0000,   -0.0316,   -0.0000,    0.0000,   -0.0561,    0.0000,    0.0000,
-                        0.0000,    0.0000,    0.0000,   -0.0000,    0.0000,    0.0000,     5.42,   3.0942};
+
+    //Attitude Only LQR gain Matrix "K" 
+    // Matrix<4,8> K = { n_gain_x,   -0.0000,    0.0000,  g_gain_x,   -0.0000,    0.0000,    0.0000,    0.0000,
+    //                     0.0000,  n_gain_y,    0.0000,   -0.0000,  g_gain_y,   -0.0000,    0.0000,    0.0000,
+    //                    -0.0000,    0.0000,   -0.0316,   -0.0000,    0.0000,   -0.0561,    0.0000,    0.0000,
+    //                     0.0000,    0.0000,    0.0000,   -0.0000,    0.0000,    0.0000,     5.42,   3.0942};
+
+    Matrix<4,8> K = {       _gain_roll,     -0.0000,        0.0000,     _gain_gx,   -0.0000,    0.0000,     0.0000,     0.0000,
+                            0.0000,         _gain_pitch,    0.0000,     -0.0000,    _gain_gy,   -0.0000,    0.0000,     0.0000,
+                           -0.0000,         0.0000,         _gain_yaw,  -0.0000,    0.0000,     _gain_gz,   0.0000,     0.0000,
+                            0.0000,         0.0000,         0.0000,     -0.0000,    0.0000,     0.0000,     _gain_vz,   _gain_z};
+
+
+    //Attitude+Altitude LQR gain matrix "K_int" with full state integral action (for each output "U")
+                    //      ROLL        PITCH       YAW     gx          gy          gz          vz          z       z_int     Roll_i     Pitch_i     Yaw_i          
+    Matrix<4,12> K_int = { _gain_roll,      -0.0000,        0.0000,     _gain_gx,   -0.0000,    0.0000,     0.0000,     0.0000,     -0.0000,        _gain_roll_int, 0.0000,             0.0000,
+                            0.0000,         _gain_pitch,    0.0000,     -0.0000,    _gain_gy,   -0.0000,    0.0000,     0.0000,     -0.0000,        0.0000,         _gain_pitch_int,    0.0000,
+                           -0.0000,         0.0000,         _gain_yaw,  -0.0000,    0.0000,     _gain_gz,   0.0000,     0.0000,     -0.0000,        0.0000,         0.0000,             _gain_yaw_int,
+                            0.0000,         0.0000,         0.0000,     -0.0000,    0.0000,     0.0000,     _gain_vz,   _gain_z,    _gain_z_int,    0.0000,         0.0000,             0.0000};
 
 };
 

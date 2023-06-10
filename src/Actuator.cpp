@@ -11,8 +11,7 @@ void Actuator::init(void)
 {
     init_servos();
     init_edf();
-    delay(10);
-    edf_shutdown();
+    delay(100);
     zero_servos();
 
 }
@@ -22,10 +21,10 @@ void Actuator::init_servos(void)
     //attach servo pins
     sx.attach(XSERVO_PIN, SERVO_X_MIN_US, SERVO_X_MAX_US);
     //sx.attach(XSERVO_PIN);
-    delay(100);
+    delay(10);
     sy.attach(YSERVO_PIN, SERVO_Y_MIN_US, SERVO_Y_MAX_US);
     //sy.attach(YSERVO_PIN);
-    delay(100);
+    delay(10);
     // rw.attach(RW_PIN);
     // delay(200);
 }
@@ -33,9 +32,9 @@ void Actuator::init_servos(void)
 void Actuator::init_edf(void)
 {
     edf.attach(EDF_PIN);
-    delay(200);    
+    delay(20);    
     edf.writeMicroseconds(EDF_OFF_PWM);
-    delay(1000);  
+    delay(100);  
 }
 
 
@@ -44,7 +43,7 @@ void Actuator::zero_servos()
     //Zero Servos
     writeXservo(0.00f);
     writeYservo(0.00f);
-    delay(1000);
+    delay(10);
 }
 
 
@@ -61,6 +60,16 @@ void Actuator::prime_edf(int delay_time_ms)
     //go to 1500 and wait 5 seconds
     edf.writeMicroseconds(EDF_MIN_PWM);
     delay(delay_time_ms);
+}
+
+bool Actuator::prime_edf(int delay_time_ms, float start_timer)
+{
+    while((millis() - start_timer) < delay_time_ms)
+    {
+        edf.writeMicroseconds(EDF_MIN_PWM);
+    }
+    
+    return true;
 }
 
 bool Actuator::servo_dance_x(float max_angle, int delay_time_ms)

@@ -21,59 +21,55 @@ float sensor_timer, print_timer, estimator_timer;
 float mst{0.00f};       //Mission Start Timer
 //... Flags ...//
 bool is_calibrated{false};  
+bool start_flag{false};
 
 
 void print_control_imu(void);
+void step_response_state_machine(float step_interval_ms, float angle);
 
 #ifdef STATEMACHINE
 void setup() {
-  //   //..... Begins .....//++++++++++++++++++++++++++++++++++++++++++++++++++++
-  // Serial.begin(115200);
-  // //Wire.begin();
-  // Serial.print("setup started");
-  // //.......... Inits ...........//
-  // //allocate sensor object holding all sensor func/vars
-  // //sensor.init();     //initializes all sensors at once
-  // control.init();
-  // delay(100);
-  // //first function call
-  // sensor.init();     //initializes all sensors at once
-  // //sensor.fsm_init();
-  // //sensor.lidar_init();
-  // delay(100);
-
 
   Serial.begin(115200);
   Serial.println("Serial Started...");
 
-  //Servo inits
-  control.act.init_servos();
-  control.act.init_edf();
-  delay(100);
-  control.act.zero_servos();
-  delay(100);
+  // //Servo inits
+  // control.act.init_servos();
+  // control.act.init_edf();
+  // delay(100);
+  // control.act.zero_servos();
+  // delay(100);
+
+  control.init();
 
   //Sensors init
-  sensor.lidar_init();
-  delay(100);
-  sensor.fsm_init();
-  delay(100);
+  // sensor.lidar_init();
+  // delay(100);
+  // sensor.fsm_init();
+  // delay(100);
+
+  sensor.init();
 
   //EDF init + prime
   // control.act.init_edf();
   // delay(100);
    control.act.prime_edf(5);
 
-  //begin mst timer
-  mst = millis();
 
 
+mst = millis();
 
 
 }
 
 
 void loop() {
+
+  //   if(start_flag == false)
+  // {
+  //   mst = millis();
+  //   start_flag = true;
+  // }
   //sample BNO080 as fast as possible allowing for .isAvailable() to catch 
   //when imu is not ready with new readings. 
   sensor.sample_fsm();
@@ -86,7 +82,7 @@ void loop() {
     sensor.sample_lidar();
     //sensor.run_estimator();
     ///*
-    control.hover(sensor.data.roll, 
+    control.lqr(sensor.data.roll, 
                   sensor.data.pitch, 
                   sensor.data.yaw, 
                   sensor.data.gx, 
@@ -105,7 +101,7 @@ void loop() {
     estimator_timer = millis();
     //sensor.run_estimator();
     //control.actuate();
-    control.actuate_servos();
+    //control.actuate_servos();
     //control.actuate_edf()
   }
 
@@ -118,20 +114,93 @@ void loop() {
     //sensor.print_estimator();
 
   }
+
+  step_response_state_machine(5000, 6.00f);
+
+  // if((millis() - mst) >= 3000 && (millis() - mst) <= 10000 )
+  // {
+  //       control.set_reference(SETPOINT_PITCH, 1.00f);
+  // }  
+  // if((millis() - mst) >= 10000 && (millis() - mst) <= 18000)
+  // {
+  //       control.set_reference(SETPOINT_PITCH, -5.00f);
+  // }  
+  // if((millis() - mst) >= 18000 && (millis() - mst) <= 30000)
+  // {
+  //       control.set_reference(SETPOINT_PITCH, 5.00f);
+  // }  
+
+  //   // Commment out below when using any of the print functions 
+  // Serial.print(r2d * control.SP_hover(0));
+  // Serial.print(",  ");
+  // Serial.println(r2d * control.SP_hover(1));
   
-  
+
 }
 
-#endif
+
+
+void step_response_state_machine(float step_interval_ms, float angle)
+{
+  float elapsed_time{millis() - mst};
+
+  if(elapsed_time >= (step_interval_ms * 1) && elapsed_time < (step_interval_ms * 2) )
+  {
+    control.set_reference(SETPOINT_PITCH, 0.00f);
+    control.set_reference(SETPOINT_ROLL , 0.00f);
+  }
+
+  if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3))
+  {
+    control.set_reference(SETPOINT_PITCH, angle);
+    control.set_reference(SETPOINT_ROLL , 0.00f);
+  }
+
+  if(elapsed_time >= ( step_interval_ms * 3 ) && elapsed_time < (step_interval_ms * 4))
+  {
+    control.set_reference(SETPOINT_PITCH, -angle);
+    control.set_reference(SETPOINT_ROLL , 0.00f);
+  }
+
+  if(elapsed_time >= (step_interval_ms * 4) && elapsed_time <= (step_interval_ms * 5))
+  {
+    control.set_reference(SETPOINT_PITCH, 0.00f);
+    control.set_reference(SETPOINT_ROLL , angle);
+  }
+
+  if(elapsed_time >= (step_interval_ms * 5) && elapsed_time < (step_interval_ms * 6))
+  {
+    control.set_reference(SETPOINT_PITCH, 0.00f);
+    control.set_reference(SETPOINT_ROLL , -angle);
+  }
+
+  if(elapsed_time >= (step_interval_ms * 6) && (elapsed_time < step_interval_ms * 7))
+  {
+    control.set_reference(SETPOINT_PITCH, -angle);
+    control.set_reference(SETPOINT_ROLL , angle);
+  }
+
+  if(elapsed_time >= (step_interval_ms * 7)) control.act.suspend();
+
+  // Commment out below when using any of the print functions 
+  // Serial.print(r2d * control.SP_hover(0));
+  // Serial.print(",  ");
+  // Serial.println(r2d * control.SP_hover(1));
+
+}
+
+
 
 //TODO: This function should go in Controller!!!
 void print_control_imu(void)
 {
   char text[250];
-  //              Roll  pitch   yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f,\t   %0.5f,  %0.5f,  %i,  %0.5f, %05f,  %i,   %0.5f, %i   ",
+  //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
+  sprintf(text, "%0.5f,%0.5f,  %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f,\t   %0.5f,  %0.5f,  %i,  %0.5f, %05f,  %i,   %0.5f, %i   ",
     r2d*sensor.data.roll,
+    r2d*control.SP_hover(0),
     r2d*sensor.data.pitch,
+    r2d*control.SP_hover(1),
     r2d*sensor.data.yaw,
     r2d*sensor.data.gx,
     r2d*sensor.data.gy,
@@ -159,7 +228,7 @@ void print_control_imu(void)
   Serial.print(sensor.data.z);
   Serial.println(", ");
 }
-
+#endif
 
 #ifdef QUICKTESTENV
 

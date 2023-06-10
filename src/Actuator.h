@@ -103,6 +103,10 @@ typedef struct
 
 class Actuator{
 public:
+    Servo sx; 
+    Servo sy; 
+    Servo edf;
+    //Servo rw;
     actuator_data_t ad;
 
     Actuator();
@@ -125,6 +129,8 @@ public:
 
     //Take EDF to 50% and hold for desired time
     void prime_edf(int delay_time_ms);
+
+    bool prime_edf(int delay_time_ms, float start_timer);
 
     //Shuts EDF motor down 
     void edf_shutdown(void);
@@ -166,10 +172,7 @@ public:
 
 private:
 
-    Servo sx; 
-    Servo sy; 
-    Servo edf;
-    //Servo rw;
+
 
 
 };

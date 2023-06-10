@@ -6,8 +6,8 @@
 
     void Sensors::init(void)
     {
-        //fsm_init();
         lidar_init();
+        delay(100);
         fsm_init();
 
         //flow_init();
@@ -43,7 +43,7 @@
         delay(100);
         // "2" = short-range, fast speed
         // "0" = normal operation 
-        garmin.configure(0, 0x62);
+        garmin.configure(0, LIDARLITE_ADDR_DEFAULT);
         delay(200);
     }
 
@@ -95,6 +95,7 @@
         } 
     } 
 
+
     void Sensors::sample_fsm(void)
     {
         if(fsm.dataAvailable() == true)
@@ -104,9 +105,9 @@
             //fsm.getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
 
             data.linAccuracy = fsm.getLinAccelAccuracy();
-            data.ay = IIR(fsm.getLinAccelX(), data.ax, .30);
-            data.ax = IIR(fsm.getLinAccelY(), data.ay, .30);
-            data.az = IIR(fsm.getLinAccelZ(), data.az, .30);
+            data.ay = IIR(fsm.getLinAccelX(), data.ax, .10);
+            data.ax = IIR(fsm.getLinAccelY(), data.ay, .10);
+            data.az = IIR(fsm.getLinAccelZ(), data.az, .10);
 
             //... Gyro ...//
            // fsm.getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
@@ -115,9 +116,9 @@
             // data.gy = fsm.getFastGyroY();
             // data.gz = fsm.getFastGyroZ();
             data.gyroAccuracy = fsm.getGyroAccuracy();
-            data.gy = IIR(fsm.getGyroX(), data.gx, .10);
-            data.gx = IIR(fsm.getGyroY(), data.gy, .10);
-            data.gz = IIR(fsm.getGyroZ(), data.gz, .10);
+            data.gy = IIR(fsm.getGyroX(), data.gx, .08);
+            data.gx = IIR(fsm.getGyroY(), data.gy, .08);
+            data.gz = IIR(fsm.getGyroZ(), data.gz, .08);
             
             //... Rotation Vector ...//
             fsm.getQuat(data.qi, data.qj, data.qk, data.qw, data.quatRadianAccuracy, data.quatAccuracy);
@@ -186,28 +187,29 @@
     {
         char text[250];
 
-        sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f ",
+        sprintf(text, "%0.5f, %0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
         r2d*data.roll,
         r2d*data.pitch,
         r2d*data.yaw,
         data.z,
-        float(distance),
+
+        estimate.x,
+        estimate.y,
         estimate.z,
+
         estimate.vx,
         estimate.vy,
         estimate.vz,
+
         data.ax,
         data.ay,
-        data.az
-        );
+        data.az,
 
-        Serial.print(text);
-        Serial.print(data.linAccuracy);
-        Serial.print(", ");
-        Serial.print(data.gyroAccuracy);
-        Serial.print(", ");
-        Serial.print(data.quatAccuracy);
-        Serial.println(", ");
+        data.linAccuracy,
+        data.gyroAccuracy,
+        data.quatAccuracy);
+
+        Serial.println(text);
     }
 
     //... FSM305 Functions End ...//
@@ -227,7 +229,7 @@
             data.z = (float)(garmin.readDistance()/100.00f);
 
             // Report to calling function that we have new data
-         //   newDistance = 1;
+            data.status.lidar = 1;
         }
         //convert from cm to m
        // data.z = (float)distance/100.00f;
@@ -267,10 +269,10 @@
         // Z(1) = data.y;
     //}
 
-   // if( data.status.lidar == 1){
+    if( data.status.lidar == 1){
         H(2,2) = 1;
         Z(2) = p[2]; // p[2]: z
-    //}
+    }
 
     // if( data.status.flow == 1){
     //     H(3,3) = 1; H(4,4) = 1;
@@ -294,7 +296,7 @@
 
     // Reset status (measurements has been used!)
     // data.status.flow = 0;
-    // data.status.lidar = 0;
+     data.status.lidar = 0;
     // data.status.imu = 0;
     // data.status.pos = 0;
 }

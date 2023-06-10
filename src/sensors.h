@@ -36,12 +36,20 @@ typedef struct
     float gx, gy, gz;
     float ax, ay, az;
     float qi, qj, qk, qw;
-    float z; //this will be removed when imu_data_t is envoked
+    float x, y, z; //this will be removed when imu_data_t is envoked
     byte linAccuracy{0};
     byte gyroAccuracy{0};
     //byte magAccuracy{0};
     float quatRadianAccuracy{0};
     byte quatAccuracy{0}; 
+    
+    struct{ // Bitfield, using 1 byte, to represent if new measurements are available
+        uint8_t imu     : 1;
+        uint8_t flow    : 1;
+        uint8_t lidar   : 1;
+        uint8_t pos     : 1;
+    } status;
+    
 } fsm_data_t;
 
 typedef struct
@@ -49,7 +57,7 @@ typedef struct
     float x, y, z;
     float vx, vy, vz; 
 
-} estimater_data_t;
+} estimator_data_t;
 
 
 //...... Class Definition .....//
@@ -62,7 +70,7 @@ class Sensors
 public:
 
     fsm_data_t data;
-    estimater_data_t estimate;
+    estimator_data_t estimate;
 
     
     Sensors(void);
