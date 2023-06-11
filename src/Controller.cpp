@@ -81,6 +81,9 @@
         cd.angle_xx = asin(Tx/(Tm - pow(Ty,2)));
         cd.angle_yy = asin(Ty/Tm);
 
+        // cd.angle_xx = asin(Tx/(Tm));
+        // cd.angle_yy = asin(Ty/(Tm - pow(Tx,2)));
+
         // U(1) = U(1) * cos(U(0));
 
         //filter servo angles, the more filtering, the bigger the delay
@@ -151,8 +154,8 @@
         //the 2nd term for each thrust component subtracts the static torque induced by the gimballed 
         //edf motor.
         //Calculate each component of the Thrust Vector
-        float Tx{ U(3) * sin(U(0))- (MASS * G * sin(U(0)) * cos(U(0))) };
-        float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (MASS * G * sin(U(1)) * cos(U(1))) };
+        float Tx{ U(3) * sin(U(0))- (COM_TO_TVC + ledf * cos(U(0))) };
+        float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (COM_TO_TVC + ledf * cos(U(1))) };
         float Tz{ U(3) * cos(U(1)) * cos(U(0)) };           
 
         //Get the magnitude of the thrust vector components 
@@ -162,8 +165,13 @@
         
         //Using the  EmboRockETH paper's outline of attaining gimbal angles 
         //from each thrust vector component and magnitude of thrust. 
-        cd.angle_xx = limit(asin(Tx/(Tm - pow(Ty,2))), -1 * MAX_TVC_DEFLECTION_RAD , MAX_TVC_DEFLECTION_RAD);
-        cd.angle_yy = limit(asin(Ty/Tm), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_xx = limit(asin(Tx/(Tm )), -1 * MAX_TVC_DEFLECTION_RAD , MAX_TVC_DEFLECTION_RAD);
+        cd.angle_yy = limit(asin(Ty/(Tm)), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        // cd.angle_xx = limit(asin(Tx/(Tm - pow(Ty,2))), -1 * MAX_TVC_DEFLECTION_RAD , MAX_TVC_DEFLECTION_RAD);
+        // cd.angle_yy = limit(asin(Ty/Tm), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+
+        // cd.angle_xx = asin(Tx/(Tm));
+        // cd.angle_yy = asin(Ty/(Tm - pow(Tx,2)));
 
         //filter servo angles, the more filtering, the bigger the delay
         //  cd.angle_x = IIRF(U(0), cd.u(0), 0.08);
@@ -180,8 +188,8 @@
         cd.Tedf = limit(Tm, 15.00f, 31.00f);
         
         //Actuate servos/edf motor 
-        act.writeXservo((float) (r2d * -cd.angle_x));
-        act.writeYservo((float) (r2d * -cd.angle_y));
+        act.writeXservo((float) (r2d * -cd.angle_xx));
+        act.writeYservo((float) (r2d * -cd.angle_yy));
         act.writeEDF((float) cd.Tedf);
 
         //Store debug/filtering data into struct

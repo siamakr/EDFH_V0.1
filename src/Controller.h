@@ -18,8 +18,9 @@
 
 //// Vehicle Specs + General Constants
 #define COM_TO_TVC 0.1335
+#define ledf .050
 #define MASS 2.757                    //Kg
-#define MAX_TVC_DEFLECTION_DEG 8.00f
+#define MAX_TVC_DEFLECTION_DEG 10.00f
 #define MAX_TVC_DEFLECTION_RAD (d2r * MAX_TVC_DEFLECTION_DEG)
 #define G 9.87
 
@@ -116,13 +117,13 @@ private:
 
     float _gain_vz{5.42};                   //ALT VELOCITY
     float _gain_z{3.0942};                  //ALTITUDE
-    float _gain_z_int{};                    //ALTITUDE INTEGRAL GAIN
+    float _gain_z_int{.1};                    //ALTITUDE INTEGRAL GAIN
 
-    float _gain_roll_int{};                 //ROLL INTEGRAL GAIN
-    float _gain_pitch_int{};                //PITCH INTEGRAL GAIN       
-    float _gain_yaw_int{};                  //YAW INTEGRAL GAIN
+    float _gain_roll_int{.1};                 //ROLL INTEGRAL GAIN
+    float _gain_pitch_int{.1};                //PITCH INTEGRAL GAIN       
+    float _gain_yaw_int{.1};                  //YAW INTEGRAL GAIN
 
-    float _int_bound_att{d2r * 4.00f};
+    float _int_bound_att{d2r * 8.00f};
     float _int_bound_alt{0.850f};
 
 

@@ -26,6 +26,7 @@ bool start_flag{false};
 
 void print_control_imu(void);
 void step_response_state_machine(float step_interval_ms, float angle);
+void print_estimator_main();
 
 #ifdef STATEMACHINE
 void setup() {
@@ -51,9 +52,8 @@ void setup() {
   sensor.init();
 
   //EDF init + prime
-  // control.act.init_edf();
-  // delay(100);
-   control.act.prime_edf(5);
+
+//   control.act.prime_edf(5);
 
 
 
@@ -81,8 +81,18 @@ void loop() {
   
     sensor.sample_lidar();
     //sensor.run_estimator();
-    ///*
+    /*
     control.lqr(sensor.data.roll, 
+                  sensor.data.pitch, 
+                  sensor.data.yaw, 
+                  sensor.data.gx, 
+                  sensor.data.gy, 
+                  sensor.data.gz, 
+                  sensor.estimate.z, 
+                  sensor.estimate.vz);
+    */
+    ///*
+    control.lqr_int(sensor.data.roll, 
                   sensor.data.pitch, 
                   sensor.data.yaw, 
                   sensor.data.gx, 
@@ -106,35 +116,19 @@ void loop() {
   }
 
   //..... Print Timer .....//
-  if(millis() - print_timer >= (DT_MSEC)  ) //DT_MSEC * 4 = 40mS
+  if(millis() - print_timer >= (DT_MSEC * 4)  ) //DT_MSEC * 4 = 40mS
   {
     print_timer = millis();
 
     print_control_imu();
     //sensor.print_estimator();
+   // print_estimator_main();
 
   }
 
-  step_response_state_machine(5000, 6.00f);
+  //step_response_state_machine(5000, 6.00f);
 
-  // if((millis() - mst) >= 3000 && (millis() - mst) <= 10000 )
-  // {
-  //       control.set_reference(SETPOINT_PITCH, 1.00f);
-  // }  
-  // if((millis() - mst) >= 10000 && (millis() - mst) <= 18000)
-  // {
-  //       control.set_reference(SETPOINT_PITCH, -5.00f);
-  // }  
-  // if((millis() - mst) >= 18000 && (millis() - mst) <= 30000)
-  // {
-  //       control.set_reference(SETPOINT_PITCH, 5.00f);
-  // }  
 
-  //   // Commment out below when using any of the print functions 
-  // Serial.print(r2d * control.SP_hover(0));
-  // Serial.print(",  ");
-  // Serial.println(r2d * control.SP_hover(1));
-  
 
 }
 
@@ -196,7 +190,7 @@ void print_control_imu(void)
 {
   char text[250];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f,%0.5f,  %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f,\t   %0.5f,  %0.5f,  %i,  %0.5f, %05f,  %i,   %0.5f, %i   ",
+  sprintf(text, "%0.5f, %0.5f,  %0.5f, %0.5f,    %0.5f,\t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f,\t   %0.5f,  %0.5f,  %i,  %0.5f, %05f,  %i,   %0.5f, %i   ",
     r2d*sensor.data.roll,
     r2d*control.SP_hover(0),
     r2d*sensor.data.pitch,
@@ -228,6 +222,35 @@ void print_control_imu(void)
   Serial.print(sensor.data.z);
   Serial.println(", ");
 }
+void print_estimator_main(void)
+{
+    char text[250];
+
+    sprintf(text, "%0.5f, %0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
+    r2d*sensor.data.roll,
+    r2d*sensor.data.pitch,
+    r2d*sensor.data.yaw,
+    sensor.data.z,
+
+    sensor.estimate.x,
+    sensor.estimate.y,
+    sensor.estimate.z,
+
+    sensor.estimate.vx,
+    sensor.estimate.vy,
+    sensor.estimate.vz,
+
+    sensor.data.ax,
+    sensor.data.ay,
+    sensor.data.az,
+
+    sensor.data.linAccuracy,
+    sensor.data.gyroAccuracy,
+    sensor.data.quatAccuracy);
+
+    Serial.println(text);
+}
+
 #endif
 
 #ifdef QUICKTESTENV

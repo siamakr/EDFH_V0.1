@@ -15,7 +15,7 @@ using namespace BLA;
 
 //..... Defines .....//
 #define DT_MSEC 10.00f
-#define DT_SEC (DT_MSEC/1000)
+#define DT_SEC (0.01)
 #define d2r (PI/180.00f)
 #define r2d (180.00f/PI)
 
@@ -37,6 +37,8 @@ typedef struct
     float ax, ay, az;
     float qi, qj, qk, qw;
     float x, y, z; //this will be removed when imu_data_t is envoked
+    float evx, evy, evz;
+    float ex, ey, ez;
     byte linAccuracy{0};
     byte gyroAccuracy{0};
     //byte magAccuracy{0};
@@ -60,6 +62,7 @@ typedef struct
 } estimator_data_t;
 
 
+
 //...... Class Definition .....//
 class Sensors
 {    
@@ -71,6 +74,7 @@ public:
 
     fsm_data_t data;
     estimator_data_t estimate;
+
 
     
     Sensors(void);
@@ -101,40 +105,44 @@ public:
     
     float IIR(float newSample, float prevOutput, float alpha);
 
-private:
 
     BNO080 fsm;
     LIDARLite_v3HP garmin;
     uint16_t distance;
 
         // Estimator matrixes
-    Matrix<6,6> A = {   1,  0,  0,  DT_SEC, 0,  0,
-                        0,  1,  0,  0,  DT_SEC, 0,
-                        0,  0,  1,  0,  0,  DT_SEC,
-                        0,  0,  0,  1,  0,  0,
-                        0,  0,  0,  0,  1,  0, 
-                        0,  0,  0,  0,  0,  1 };
+    Matrix<6,6> A = {   1.0,  0,  0,  0.01, 0,  0,
+                        0,  1.0,  0,  0,  0.01, 0,
+                        0,  0,  1.0,  0,  0,  0.01,
+                        0,  0,  0,  1.0,  0,  0,
+                        0,  0,  0,  0,  1.0,  0, 
+                        0,  0,  0,  0,  0,  1.0 };
 
-    Matrix<6,3> B = {   0.5*pow(DT_SEC,2),  0,              0,         
-                        0,              0.5*pow(DT_SEC,2),  0,         
-                        0,              0,              0.5*pow(DT_SEC,2),  
-                        DT_SEC,             0,              0,         
-                        0,              DT_SEC,             0,         
-                        0,              0,              DT_SEC };
+    Matrix<6,3> B = {   0.00005,  0,              0,         
+                        0,              0.00005,  0,         
+                        0,              0,              0.00005,  
+                        0.01,             0,              0,         
+                        0,              0.01,             0,         
+                        0,              0,              0.01 };
  
-    Matrix<6,6> H; 
+    Matrix<6,6> H = {   0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f,   
+                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 
+                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 
+                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 
+                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 
+                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f}; 
 
     // State vector
-    Matrix<6,1> X = {0,0,0,0,0,0};
+    Matrix<6,1> X;
 
     // Prediction vector
-    Matrix<6,1> Xpre;
+    Matrix<6,1> Xpre ;  
 
     // Measurement vector
-    Matrix<6,1> Z = {0,0,0,0,0,0};
+    Matrix<6,1> Z ;
 
     // Input vector
-    Matrix<3,1> U = {0,0,0};
+    Matrix<3,1> U_est ;
 
     // Estimator gain
     /* Matrix<6,6> Kf = {  0.0001,    0.0000,    0.0000,    0.0095,   -0.0000,    0.0000,
@@ -158,7 +166,17 @@ private:
                         0.000000, 0.162570, 0.000000, 0.000000, 0.131210, 0.000000,
                         0.000000, 0.000000, 4.190280, 0.000000, 0.000000, 0.045440   };
 
+
+private:
+
 };
+
+
+
+
+
+
+
 
 
 #endif
