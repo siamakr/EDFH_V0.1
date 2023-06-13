@@ -55,7 +55,7 @@ void setup() {
 
    control.act.prime_edf(5);
 
-
+//while(control.act.prime_edf(5,millis()));
 
 // mst = millis();
 
@@ -92,7 +92,7 @@ void loop() {
                   sensor.estimate.vz);
     */
     ///*
-    control.lqr(sensor.data.roll, 
+    control.lqr_int(sensor.data.roll, 
                   sensor.data.pitch, 
                   sensor.data.yaw, 
                   sensor.data.gx, 
@@ -100,7 +100,7 @@ void loop() {
                   sensor.data.gz, 
                   sensor.estimate.z, 
                   sensor.estimate.vz);
-    //*/
+   // */
 
     //control.hover(sensor.data, sensor.estimate);
   }
@@ -119,14 +119,14 @@ void loop() {
   if(millis() - print_timer >= (DT_MSEC * 4)  ) //DT_MSEC * 4 = 40mS
   {
     print_timer = millis();
-
+    //control.print_debug();
     print_control_imu();
     //sensor.print_estimator();
    // print_estimator_main();
 
   }
 
-  step_response_state_machine(3000, 6.00f);
+  step_response_state_machine(3000, 8.00f);
 
 
 
@@ -192,9 +192,9 @@ void print_control_imu(void)
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
   sprintf(text, "%0.5f, %0.5f,  %0.5f, %0.5f,    %0.5f,\t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f,\t   %0.5f,  %0.5f,  %i,  %0.5f, %05f,  %i,   %0.5f, %i   ",
     r2d*sensor.data.roll,
-    r2d*control.SP_hover(0),
+    r2d*control.SP_hover_int(0),
     r2d*sensor.data.pitch,
-    r2d*control.SP_hover(1),
+    r2d*control.SP_hover_int(1),
     r2d*sensor.data.yaw,
     r2d*sensor.data.gx,
     r2d*sensor.data.gy,

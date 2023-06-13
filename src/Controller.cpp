@@ -57,22 +57,14 @@
         //Use below for static hold-down tests 
         U(3) = MASS * G;
 
-        //calculate integral terms if within integeral bounds
-        //U(0) += (error(0) <= d2r*3.00f || error(0) >= d2r*-3.00f) ? int_gain * (-(cd.e(0) - error(0)) * dt) : 0.00f;
-        //U(1) += (error(1) <= d2r*3.00f || error(1) >= d2r*-3.00f) ? int_gain * (-(cd.e(1) - error(1)) * dt) : 0.00f;
-        //U(3) += int_z_gain * (error(6) - cd.e(6)) ;
-
-
         //load new Thrust Vector from desired torque
-        float Tx{ U(3) * sin(U(0)) };
-        float Ty{ U(3) * sin(U(1)) * cos(U(0)) };
-        float Tz{ U(3) * cos(U(1)) * cos(U(0)) };          
+        // float Tx{ U(3) * sin(U(0)) };
+        // float Ty{ U(3) * sin(U(1)) * cos(U(0)) };
+        // float Tz{ U(3) * cos(U(1)) * cos(U(0)) };     
 
-            // Forces including COM change of gimballing EDF (adding force components per mass force)
-            //  float Tx{ (U(3) * sin(U(0)) };
-            //  float Ty{ U(3) * sin(U(1)) * cos(U(0)) };
-            //  float Tz{  U(3) *cos(U(1)) * cos(U(0))  }; 
-
+        float Tx{ U(3) * sin(U(0)) - (MASS_EDF * sin(U(0)))};
+        float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (MASS_EDF * sin(U(1))) };
+        float Tz{ U(3) * cos(U(1)) * cos(U(0)) };        
 
         float Tm = sqrt(pow(Tx,2) + pow(Ty,2) + pow(Tz,2));
         //save the value straight out of the controller before nomalizing. 
@@ -99,6 +91,11 @@
         cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.08), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
         cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.08), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
         cd.Tedf = limit(Tm, 15.00f, 31.00f);
+
+        debug(4) = r2d*cd.angle_xx;
+        debug(5) = r2d*cd.angle_x;
+        debug(8) = r2d*cd.angle_yy;
+        debug(9) = r2d*cd.angle_y;
         
         //Actuate servos/edf motor 
         act.writeXservo((float) (r2d * -cd.angle_x));
@@ -130,16 +127,33 @@
           //load state vecotr
         Xs = {r, p, y, gx, gy, gz, 0, 0};
 
+        debug(0) = r2d*r;
+        debug(1) = r2d*p;
+        debug(2) = r2d*y;
+        debug(3) = 111111.00f;
+
         //calculate reference error
         error = Xs - REF;
 
         //Clamp the integral action to a +- x-degrees neighborhood of the desired attitude. 
         //Calculate integral action and put updated error values back into error matrix
-        error(8)  = ( ( error(7) > (-1 * _int_bound_att) ) || ( error(7) <= _int_bound_att ) ) ? error(7) * DT_SEC : 0.00f;       
-        error(9)  = ( ( error(1) > (-1 * _int_bound_att) ) || ( error(1) <= _int_bound_att ) ) ? error(1) * DT_SEC : 0.00f;       
-        error(10) = ( ( error(2) > (-1 * _int_bound_att) ) || ( error(2) <= _int_bound_att ) ) ? error(2) * DT_SEC : 0.00f;       
-        error(11) = ( ( error(3) > (-1 * _int_bound_alt) ) || ( error(3) <= _int_bound_alt ) ) ? error(3) * DT_SEC : 0.00f;       
+        //the cd.e_int(•) term is the previous error in the integral positions in error vector
+        //altitude integral action 
+        error(8)  = ( ( error(7) > (-1 * _int_bound_alt) ) || ( error(7) <= _int_bound_alt ) ) ? cd.e_int(8) + (error(7) * DT_SEC) : 0.00f;       
+        //attitude integral actions
+        error(9)  = ( ( error(1) > (-1 * _int_bound_att) ) || ( error(1) <= _int_bound_att ) ) ? cd.e_int(9) + (error(1) * DT_SEC) : 0.00f;       
+        error(10) = ( ( error(2) > (-1 * _int_bound_att) ) || ( error(2) <= _int_bound_att ) ) ? cd.e_int(10) + (error(2) * DT_SEC) : 0.00f;       
+        error(11) = ( ( error(3) > (-1 * _int_bound_att) ) || ( error(3) <= _int_bound_att ) ) ? cd.e_int(11) + (error(3) * DT_SEC) : 0.00f;  
+
+        error(9) = limit(error(8), -_max_int_def, _max_int_def);     
+        error(10) = limit(error(9), -_max_int_def, _max_int_def);     
+        error(11) = limit(error(10), -_max_int_def, _max_int_def);     
        
+       //clamp the outputs of the integral action also with a limiter 
+        debug(12) = r2d*error(9);
+        debug(13) = r2d*error(10);
+        debug(14) = r2d*error(11);
+        debug(15) = error(8);
        
     
         //Run LQR Controller + full integral action
@@ -154,16 +168,15 @@
         //the 2nd term for each thrust component subtracts the static torque induced by the gimballed 
         //edf motor.
 
-        float Tx_static{(COM_TO_TVC + ledf * cos(U(0))) };
-        float Ty_static{ (COM_TO_TVC + ledf * cos(U(1)))};
         //Calculate each component of the Thrust Vector
         float Tx{ U(3) * sin(U(0)) - (MASS_EDF * sin(U(0)))};
         float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (MASS_EDF * sin(U(1))) };
         float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
 
-        // //remove the static torque from the desired angle 
-        // Tx =   (Tx < 0.00f ? (Tx + Tx_static) : (Tx - Tx_static));      
-        // Ty =   (Ty < 0.00f ? (Ty + Ty_static) : (Ty - Ty_static));      
+        debug(16) = 111111.00f;
+        debug(17) = Tx;
+        debug(18) = Ty;
+        debug(19) = Tz;
 
         //Get the magnitude of the thrust vector components 
         float Tm = sqrt(pow(Tx,2) + pow(Ty,2) + pow(Tz,2));
@@ -179,6 +192,7 @@
         //from each thrust vector component and magnitude of thrust. 
         cd.angle_xx = limit(asin(Tx/(Tm )), -1 * MAX_TVC_DEFLECTION_RAD , MAX_TVC_DEFLECTION_RAD);
         cd.angle_yy = limit(asin(Ty/(Tm)), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+
         // cd.angle_xx = limit(asin(Tx/(Tm - pow(Ty,2))), -1 * MAX_TVC_DEFLECTION_RAD , MAX_TVC_DEFLECTION_RAD);
         // cd.angle_yy = limit(asin(Ty/Tm), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
 
@@ -198,6 +212,11 @@
         cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.08), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
         cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.08), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
         cd.Tedf = limit(Tm, 15.00f, 31.00f);
+
+        debug(6) = r2d*cd.angle_xx;
+        debug(7) = r2d*cd.angle_x;
+        debug(10) = r2d*cd.angle_yy;
+        debug(11) = r2d*cd.angle_y;
         
         //Actuate servos/edf motor 
         act.writeXservo((float) (r2d * -cd.angle_xx));
@@ -243,9 +262,9 @@
             // case SETPOINT_X: SP_pos(0) = value; break;
             // case SETPOINT_Y: SP_pos(1) = value; break;
             // case SETPOINT_Z: SP_hover(6) = value; break;
-            case SETPOINT_ROLL: SP_hover(0) = value; break;
-            case SETPOINT_PITCH: SP_hover(1) = value; break;
-            case SETPOINT_YAW: SP_hover(2) = value; break;
+            case SETPOINT_ROLL: SP_hover_int(0) = value; break;
+            case SETPOINT_PITCH: SP_hover_int(1) = value; break;
+            case SETPOINT_YAW: SP_hover_int(2) = value; break;
         }
 
     }
@@ -261,4 +280,9 @@
     float Controller::IIRF(float newSample, float prevOutput, float alpha)
     {
         return ( ( (1.00f - alpha ) * newSample ) + ( alpha * prevOutput ) );
+    }
+
+    void Controller::print_debug(void)
+    {
+        Serial << debug << "\n" ;
     }

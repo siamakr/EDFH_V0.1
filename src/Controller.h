@@ -96,6 +96,8 @@ public:
 
     void set_reference(control_setpoint_t cs, float value);
 
+    void print_debug(void);
+
 
 
 
@@ -108,11 +110,11 @@ private:
 
     //LQR Gains 
     //Use these for gain scheduling //
-    float _gain_roll{0.5100};               //ROLL GAIN
+    float _gain_roll{0.5200};               //ROLL GAIN
     float _gain_pitch{_gain_roll};          //PITCH GAIN
     float _gain_yaw{.0316};                 //YAW GAIN
 
-    float _gain_gx{0.1230};                 //GX GAIN
+    float _gain_gx{0.1330};                 //GX GAIN
     float _gain_gy{_gain_gx};               //GY GAIN 
     float _gain_gz{.0561};                  //GZ GAIN
 
@@ -120,12 +122,13 @@ private:
     float _gain_z{3.0942};                  //ALTITUDE
     float _gain_z_int{.1};                    //ALTITUDE INTEGRAL GAIN
 
-    float _gain_roll_int{.1};                 //ROLL INTEGRAL GAIN
-    float _gain_pitch_int{.1};                //PITCH INTEGRAL GAIN       
-    float _gain_yaw_int{.1};                  //YAW INTEGRAL GAIN
+    float _gain_roll_int{.01};                 //ROLL INTEGRAL GAIN
+    float _gain_pitch_int{.01};                //PITCH INTEGRAL GAIN       
+    float _gain_yaw_int{.01};                  //YAW INTEGRAL GAIN
 
-    float _int_bound_att{d2r * 2.00f};
+    float _int_bound_att{d2r * 3.00f};
     float _int_bound_alt{0.850f};
+    float _max_int_def{d2r*2.00f};
 
 
     //FILTER PARAMS
@@ -157,6 +160,10 @@ private:
                             0.0000,         _gain_pitch,    0.0000,     -0.0000,    _gain_gy,   -0.0000,    0.0000,     0.0000,     -0.0000,        0.0000,         _gain_pitch_int,    0.0000,
                            -0.0000,         0.0000,         _gain_yaw,  -0.0000,    0.0000,     _gain_gz,   0.0000,     0.0000,     -0.0000,        0.0000,         0.0000,             _gain_yaw_int,
                             0.0000,         0.0000,         0.0000,     -0.0000,    0.0000,     0.0000,     _gain_vz,   _gain_z,    _gain_z_int,    0.0000,         0.0000,             0.0000};
+
+
+    //These are debug matricies to use its matrix print function
+    Matrix<20> debug ;
 
 };
 
