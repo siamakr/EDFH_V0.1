@@ -17,12 +17,13 @@
 #define XSERVO_PIN 14
 
 //// Vehicle Specs + General Constants
-#define COM_TO_TVC 0.1335
-#define ledf .050
-#define MASS 2.757                    //Kg
-#define MAX_TVC_DEFLECTION_DEG 10.00f
-#define MAX_TVC_DEFLECTION_RAD (d2r * MAX_TVC_DEFLECTION_DEG)
-#define G 9.87
+#define COM_TO_TVC 0.1335                                       //m
+#define ledf .050                                               //m
+#define MASS_EDF .700                                           //Kg
+#define MASS 2.757                                              //Kg
+#define MAX_TVC_DEFLECTION_DEG 10.00f                           //deg
+#define MAX_TVC_DEFLECTION_RAD (d2r * MAX_TVC_DEFLECTION_DEG)   //rad
+#define G 9.87                                                  //m/s^2
 
 
 //MASS-MOMENT-OF-INERTIA OF VEHICLE
@@ -123,7 +124,7 @@ private:
     float _gain_pitch_int{.1};                //PITCH INTEGRAL GAIN       
     float _gain_yaw_int{.1};                  //YAW INTEGRAL GAIN
 
-    float _int_bound_att{d2r * 8.00f};
+    float _int_bound_att{d2r * 2.00f};
     float _int_bound_alt{0.850f};
 
 

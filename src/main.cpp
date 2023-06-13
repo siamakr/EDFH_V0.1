@@ -35,29 +35,29 @@ void setup() {
   Serial.println("Serial Started...");
 
   // //Servo inits
-  // control.act.init_servos();
-  // control.act.init_edf();
-  // delay(100);
-  // control.act.zero_servos();
-  // delay(100);
+  control.act.init_servos();
+  control.act.init_edf();
+  delay(100);
+  control.act.zero_servos();
+  delay(100);
 
-  control.init();
+ // control.init();
 
   //Sensors init
-  // sensor.lidar_init();
-  // delay(100);
-  // sensor.fsm_init();
-  // delay(100);
+  sensor.lidar_init();
+  delay(100);
+  sensor.fsm_init();
+  delay(100);
 
-  sensor.init();
+ // sensor.init();
 
   //EDF init + prime
 
-//   control.act.prime_edf(5);
+   control.act.prime_edf(5);
 
 
 
-mst = millis();
+// mst = millis();
 
 
 }
@@ -65,11 +65,11 @@ mst = millis();
 
 void loop() {
 
-  //   if(start_flag == false)
-  // {
-  //   mst = millis();
-  //   start_flag = true;
-  // }
+    if(start_flag == false)
+  {
+    mst = millis();
+    start_flag = true;
+  }
   //sample BNO080 as fast as possible allowing for .isAvailable() to catch 
   //when imu is not ready with new readings. 
   sensor.sample_fsm();
@@ -92,7 +92,7 @@ void loop() {
                   sensor.estimate.vz);
     */
     ///*
-    control.lqr_int(sensor.data.roll, 
+    control.lqr(sensor.data.roll, 
                   sensor.data.pitch, 
                   sensor.data.yaw, 
                   sensor.data.gx, 
@@ -109,7 +109,7 @@ void loop() {
   if(millis() - estimator_timer >= DT_MSEC )
   {
     estimator_timer = millis();
-    //sensor.run_estimator();
+   // sensor.run_estimator();
     //control.actuate();
     //control.actuate_servos();
     //control.actuate_edf()
@@ -126,7 +126,7 @@ void loop() {
 
   }
 
-  //step_response_state_machine(5000, 6.00f);
+  step_response_state_machine(3000, 6.00f);
 
 
 

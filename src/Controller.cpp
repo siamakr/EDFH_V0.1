@@ -131,19 +131,19 @@
         Xs = {r, p, y, gx, gy, gz, 0, 0};
 
         //calculate reference error
-        error = REF - Xs;
+        error = Xs - REF;
 
         //Clamp the integral action to a +- x-degrees neighborhood of the desired attitude. 
         //Calculate integral action and put updated error values back into error matrix
-        error(8)  = ( ( error(7) < (-1 * _int_bound_att) ) || ( error(7) > _int_bound_att ) ) ? error(7) * DT_SEC : 0.00f;       
-        error(9)  = ( ( error(1) < (-1 * _int_bound_att) ) || ( error(1) > _int_bound_att ) ) ? error(7) * DT_SEC : 0.00f;       
-        error(10) = ( ( error(2) < (-1 * _int_bound_att) ) || ( error(2) > _int_bound_att ) ) ? error(7) * DT_SEC : 0.00f;       
-        error(11) = ( ( error(3) < (-1 * _int_bound_alt) ) || ( error(3) > _int_bound_alt ) ) ? error(7) * DT_SEC : 0.00f;       
+        error(8)  = ( ( error(7) > (-1 * _int_bound_att) ) || ( error(7) <= _int_bound_att ) ) ? error(7) * DT_SEC : 0.00f;       
+        error(9)  = ( ( error(1) > (-1 * _int_bound_att) ) || ( error(1) <= _int_bound_att ) ) ? error(1) * DT_SEC : 0.00f;       
+        error(10) = ( ( error(2) > (-1 * _int_bound_att) ) || ( error(2) <= _int_bound_att ) ) ? error(2) * DT_SEC : 0.00f;       
+        error(11) = ( ( error(3) > (-1 * _int_bound_alt) ) || ( error(3) <= _int_bound_alt ) ) ? error(3) * DT_SEC : 0.00f;       
        
        
     
         //Run LQR Controller + full integral action
-        U = K_int * error;
+        U = -K_int * error;
 
         //Update the EDF motor control signal with Vehicle weight
         //U(3) += MASS * G;         //Normal Mode
@@ -153,13 +153,25 @@
         //due to the change in J when the EDF motor is actuated. 
         //the 2nd term for each thrust component subtracts the static torque induced by the gimballed 
         //edf motor.
+
+        float Tx_static{(COM_TO_TVC + ledf * cos(U(0))) };
+        float Ty_static{ (COM_TO_TVC + ledf * cos(U(1)))};
         //Calculate each component of the Thrust Vector
-        float Tx{ U(3) * sin(U(0))- (COM_TO_TVC + ledf * cos(U(0))) };
-        float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (COM_TO_TVC + ledf * cos(U(1))) };
-        float Tz{ U(3) * cos(U(1)) * cos(U(0)) };           
+        float Tx{ U(3) * sin(U(0)) - (MASS_EDF * sin(U(0)))};
+        float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (MASS_EDF * sin(U(1))) };
+        float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
+
+        // //remove the static torque from the desired angle 
+        // Tx =   (Tx < 0.00f ? (Tx + Tx_static) : (Tx - Tx_static));      
+        // Ty =   (Ty < 0.00f ? (Ty + Ty_static) : (Ty - Ty_static));      
 
         //Get the magnitude of the thrust vector components 
         float Tm = sqrt(pow(Tx,2) + pow(Ty,2) + pow(Tz,2));
+
+                //Calculate each component of the Thrust Vector
+        // float Tx{ U(3) * sin(U(0)) - Tx_static};
+        // float Ty{ U(3) * sin(U(1)) * cos(U(0)) - Ty_static};
+        // float Tz{ U(3) * cos(U(1)) * cos(U(0)) };
         //save the value straight out of the controller before nomalizing. 
         //U(3) = Tm;
         
@@ -208,15 +220,15 @@
         //angles are switched due to calibration imu axis change, will change this
         //in the polynomial regression definition of the servo angles to tvc angle
         
-        act.writeXservo((float) r2d * -angle_x_rad);
-        act.writeYservo((float) r2d * -angle_y_rad);
+        act.writeXservo((float)  -angle_x_rad);
+        act.writeYservo((float)  -angle_y_rad);
         act.writeEDF((float) thrust_force_newton);
     }
 
     void Controller::actuate_servos(float angle_x_rad, float angle_y_rad)
     {
-        act.writeXservo((float) r2d * -angle_x_rad);
-        act.writeYservo((float) r2d * -angle_y_rad);
+        act.writeXservo((float)  -angle_x_rad);
+        act.writeYservo((float)  -angle_y_rad);
     }
 
     void Controller::actuate_edf(float thrust_force_newton)
