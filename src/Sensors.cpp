@@ -36,6 +36,12 @@
         Serial.println("FSM Init Finished..."); 
         delay(300);
         sample_fsm();
+        // while(!(data.gyroAccuracy == 3) && !(data.linAccuracy == 3) && !(data.quatAccuracy == 3) )
+        // {
+        //     sample_fsm();
+        //     delay(250);
+        //     Serial.println("move vehicle to calibrate IMU ");
+        // }
         //save current position of yaw as the zero. 
         yaw_origin = data.yaw;
     }
@@ -119,9 +125,9 @@
             // data.gy = fsm.getFastGyroY();
             // data.gz = fsm.getFastGyroZ();
             data.gyroAccuracy = fsm.getGyroAccuracy();
-            data.gy = IIR(fsm.getGyroX(), data.gx, .08);
-            data.gx = IIR(fsm.getGyroY(), data.gy, .08);
-            data.gz = IIR(fsm.getGyroZ(), data.gz, .08);
+            data.gy = IIR(fsm.getGyroX(), data.gx, .12);
+            data.gx = IIR(fsm.getGyroY(), data.gy, .12);
+            data.gz = IIR(fsm.getGyroZ(), data.gz, .12);
             
             //... Rotation Vector ...//
             fsm.getQuat(data.qi, data.qj, data.qk, data.qw, data.quatRadianAccuracy, data.quatAccuracy);
@@ -133,8 +139,8 @@
 
 
             //... Euler Angle Representation ...//
-            data.pitch = fsm.getRoll();
-            data.roll = fsm.getPitch();
+            data.pitch = fsm.getRoll() + FSM_ROLL_OFFSET_RAD;
+            data.roll = fsm.getPitch() + FSM_PITCH_OFFSET_RAD;
             data.yaw = fsm.getYaw();    
             //data.yaw = 0.00f;
         }

@@ -88,8 +88,8 @@
         // cd.angle_x = limit(IIRF(cd.angle_xx, cd.u(0), 0.08), d2r * -8.00f, d2r * 8.00f);
         // cd.angle_y = limit(IIRF(cd.angle_yy, cd.u(1), 0.08), d2r * -8.00f, d2r * 8.00f);
 
-        cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.08), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
-        cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.08), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.04), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.04), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
         cd.Tedf = limit(Tm, 15.00f, 31.00f);
 
         debug(4) = r2d*cd.angle_xx;
@@ -139,15 +139,15 @@
         //Calculate integral action and put updated error values back into error matrix
         //the cd.e_int(•) term is the previous error in the integral positions in error vector
         //altitude integral action 
-        error(8)  = ( ( error(7) > (-1 * _int_bound_alt) ) || ( error(7) <= _int_bound_alt ) ) ? cd.e_int(8) + (error(7) * DT_SEC) : 0.00f;       
+        error(8)  = ( ( error(7) >= (-1 * _int_bound_alt) ) || ( error(7) <= _int_bound_alt ) ) ? cd.e_int(8) + (error(7) * DT_SEC) : 0.00f;       
         //attitude integral actions
-        error(9)  = ( ( error(1) > (-1 * _int_bound_att) ) || ( error(1) <= _int_bound_att ) ) ? cd.e_int(9) + (error(1) * DT_SEC) : 0.00f;       
-        error(10) = ( ( error(2) > (-1 * _int_bound_att) ) || ( error(2) <= _int_bound_att ) ) ? cd.e_int(10) + (error(2) * DT_SEC) : 0.00f;       
-        error(11) = ( ( error(3) > (-1 * _int_bound_att) ) || ( error(3) <= _int_bound_att ) ) ? cd.e_int(11) + (error(3) * DT_SEC) : 0.00f;  
+        error(9)  = ( ( error(1) >= (-1 * _int_bound_att) ) || ( error(1) <= _int_bound_att ) ) ? cd.e_int(9) + (error(1) * DT_SEC) : 0.00f;       
+        error(10) = ( ( error(2) >= (-1 * _int_bound_att) ) || ( error(2) <= _int_bound_att ) ) ? cd.e_int(10) + (error(2) * DT_SEC) : 0.00f;       
+        error(11) = ( ( error(3) >= (-1 * _int_bound_att) ) || ( error(3) <= _int_bound_att ) ) ? cd.e_int(11) + (error(3) * DT_SEC) : 0.00f;  
 
-        error(9) = limit(error(8), -_max_int_def, _max_int_def);     
-        error(10) = limit(error(9), -_max_int_def, _max_int_def);     
-        error(11) = limit(error(10), -_max_int_def, _max_int_def);     
+        error(9) = limit(error(9), -_max_int_def, _max_int_def);     
+        error(10) = limit(error(10), -_max_int_def, _max_int_def);     
+        error(11) = limit(error(11), -_max_int_def, _max_int_def);     
        
        //clamp the outputs of the integral action also with a limiter 
         debug(12) = r2d*error(9);
@@ -209,8 +209,8 @@
         // cd.angle_x = limit(IIRF(cd.angle_xx, cd.u(0), 0.08), d2r * -8.00f, d2r * 8.00f);
         // cd.angle_y = limit(IIRF(cd.angle_yy, cd.u(1), 0.08), d2r * -8.00f, d2r * 8.00f);
 
-        cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.08), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
-        cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.08), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.04), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.04), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
         cd.Tedf = limit(Tm, 15.00f, 31.00f);
 
         debug(6) = r2d*cd.angle_xx;

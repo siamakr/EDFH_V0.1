@@ -110,11 +110,11 @@ private:
 
     //LQR Gains 
     //Use these for gain scheduling //
-    float _gain_roll{0.5200};               //ROLL GAIN
+    float _gain_roll{0.4300};               //ROLL GAIN
     float _gain_pitch{_gain_roll};          //PITCH GAIN
     float _gain_yaw{.0316};                 //YAW GAIN
 
-    float _gain_gx{0.1330};                 //GX GAIN
+    float _gain_gx{0.1430};                 //GX GAIN
     float _gain_gy{_gain_gx};               //GY GAIN 
     float _gain_gz{.0561};                  //GZ GAIN
 
@@ -126,9 +126,9 @@ private:
     float _gain_pitch_int{.01};                //PITCH INTEGRAL GAIN       
     float _gain_yaw_int{.01};                  //YAW INTEGRAL GAIN
 
-    float _int_bound_att{d2r * 3.00f};
+    float _int_bound_att{d2r * 1.00f};
     float _int_bound_alt{0.850f};
-    float _max_int_def{d2r*2.00f};
+    float _max_int_def{d2r*1.00f};
 
 
     //FILTER PARAMS

@@ -19,6 +19,9 @@ using namespace BLA;
 #define d2r (PI/180.00f)
 #define r2d (180.00f/PI)
 
+#define FSM_ROLL_OFFSET_RAD (d2r * -1.28331)
+#define FSM_PITCH_OFFSET_RAD (d2r * -2.18253)
+
 
 //..... SPI Pin Definitons .....//
 const byte imuCSPin = 10;
@@ -105,7 +108,7 @@ public:
 
 
     // State vector
-    Matrix<6,1> Xe= {01.00f,01.00f,01.00f,01.00f,01.00f,01.00f} ;
+    Matrix<6,1> Xe= {0.00f,0.00f,0.00f,0.00f,0.00f,0.00f} ;
 
     // Prediction vector
     Matrix<6,1> Xpre = {0.00f,0.00f,0.00f,0.00f,0.00f,0.00f};  

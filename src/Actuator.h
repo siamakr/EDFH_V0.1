@@ -59,22 +59,31 @@
 ///// MKS Servo TVC Regression Coeffs
 
 ////////// Version 4 //////////
+// #define X_P1 0.1174
+// #define X_P2 33.20
+// #define X_P3 1422
+
+// #define Y_P1 -0.2077
+// #define Y_P2 -26.89
+// #define Y_P3 1576
+
+////////// Version 5 //////////
 #define X_P1 0.1174
 #define X_P2 33.20
-#define X_P3 1422
+#define X_P3 1390
 
 #define Y_P1 -0.2077
 #define Y_P2 -26.89
-#define Y_P3 1576
+#define Y_P3 1556
 
 ////////// Version 3 //////////
-//#define X_P1 0.1243
-//#define X_P2 33.11
-//#define X_P3 1428
-//
-//#define Y_P1 -0.2112
-//#define Y_P2 -26.83
-//#define Y_P3 1596
+// #define X_P1 0.1243
+// #define X_P2 33.11
+// #define X_P3 1428
+
+// #define Y_P1 -0.2112
+// #define Y_P2 -26.83
+// #define Y_P3 1596
 
 
 //  -.00025151   0.96511  -891.54
