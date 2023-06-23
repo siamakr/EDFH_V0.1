@@ -10,11 +10,6 @@
 #include <BasicLinearAlgebra.h>
 #include <stdint.h>
 
-// Teensy 4.1 Pin assignments
-#define RW_PIN 37
-#define EDF_PIN 36
-#define YSERVO_PIN 33
-#define XSERVO_PIN 14
 
 //// Vehicle Specs + General Constants
 #define COM_TO_TVC 0.1335                                       //m
@@ -48,13 +43,16 @@ typedef struct
     Matrix<8,1> e = {0.00f};
     Matrix<12,1> e_int = {0.00f};
     Matrix<4,1> u = {0.00f};
+    Matrix<4,1> u_output = {0.00f};
     //add more data points as needed for debugging
 }controller_data_t;
 
 typedef enum{
     CONTROL_STATUS_STATIONARY = 0,
+    CONTROL_STATUS_EDF_PRIMING,
     CONTROL_STATUS_FLYING,
     CONTROL_STATUS_LANDING,
+    CONTROL_STATUS_IMU_CALIBRATION
 } control_status_t; 
 
 typedef enum{
@@ -74,15 +72,16 @@ public:
     Actuator act;
     controller_data_t cd;
     control_setpoint_t setpoint; 
-        Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};    //Desired Reference
+    Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};    //Desired Reference
     Matrix<12,1> SP_hover_int = {0.00};    //Desired Reference
+    control_status_t status;
 
 
     Controller( void );
     
     void init(void);
 
-    void edf_startup(int seconds);
+    bool edf_startup(int seconds);
 
     void lqr(float r, float p, float y, float gx, float gy, float gz, float z, float vz);
     
@@ -107,41 +106,38 @@ private:
     float limit(float value, float min, float max);
 
     float IIRF(float newSample, float prevOutput, float alpha);
-
+    //Feedforward gains
+    volatile float _gain_ff_roll{0.085};
+    volatile float _gain_ff_pitch{0.085};
     //LQR Gains 
     //Use these for gain scheduling //
-    float _gain_roll{0.4300};               //ROLL GAIN
-    float _gain_pitch{_gain_roll};          //PITCH GAIN
-    float _gain_yaw{.0316};                 //YAW GAIN
+    volatile float _gain_roll{0.3700};               //ROLL GAIN
+    volatile float _gain_pitch{_gain_roll};          //PITCH GAIN
+    volatile float _gain_yaw{.0316};                 //YAW GAIN
 
-    float _gain_gx{0.1430};                 //GX GAIN
-    float _gain_gy{_gain_gx};               //GY GAIN 
-    float _gain_gz{.0561};                  //GZ GAIN
+    volatile float _gain_gx{0.1140};                 //GX GAIN
+    volatile float _gain_gy{_gain_gx};               //GY GAIN 
+    volatile float _gain_gz{.0561};                  //GZ GAIN
 
-    float _gain_vz{5.42};                   //ALT VELOCITY
-    float _gain_z{3.0942};                  //ALTITUDE
-    float _gain_z_int{.1};                    //ALTITUDE INTEGRAL GAIN
+    volatile float _gain_vz{5.42};                   //ALT VELOCITY
+    volatile float _gain_z{3.0942};                  //ALTITUDE
+    volatile float _gain_z_int{.1};                  //ALTITUDE INTEGRAL GAIN
 
-    float _gain_roll_int{.01};                 //ROLL INTEGRAL GAIN
-    float _gain_pitch_int{.01};                //PITCH INTEGRAL GAIN       
-    float _gain_yaw_int{.01};                  //YAW INTEGRAL GAIN
+    volatile float _gain_roll_int{.05};              //ROLL INTEGRAL GAIN
+    volatile float _gain_pitch_int{.05};             //PITCH INTEGRAL GAIN       
+    volatile float _gain_yaw_int{-.0001};               //YAW INTEGRAL GAIN
 
-    float _int_bound_att{d2r * 1.00f};
-    float _int_bound_alt{0.850f};
-    float _max_int_def{d2r*1.00f};
+    volatile float _int_bound_att{d2r * 2.00f};
+    volatile float _int_bound_alt{0.850f};
+    volatile float _max_int_def{d2r*2.00f};
 
-
-    //FILTER PARAMS
-    float _alpha_gyro{0.18};                //GYROSCOPE FILTER ALPHA
-    float _alpha_actuator{0.05};            //SERVO ACTUATOR SIGNAL FILTER ALPHA 
-
-    float xsetpoint{0.00f};
-    float ysetpoint{0.00f};
-    float tinterval1{2.50f};
-    float tinterval2{1.25f};
+    volatile float _alpha_servo{0.10};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
 
 
-
+    Matrix<12,1> _gain_matrix = {   _gain_roll, _gain_pitch, _gain_yaw, 
+                                    _gain_gx, _gain_gy, _gain_gz, 
+                                    _gain_vz, _gain_z, _gain_z_int,
+                                    _gain_roll_int, _gain_pitch_int, _gain_yaw_int};
     //Attitude Only LQR gain Matrix "K" 
     // Matrix<4,8> K = { n_gain_x,   -0.0000,    0.0000,  g_gain_x,   -0.0000,    0.0000,    0.0000,    0.0000,
     //                     0.0000,  n_gain_y,    0.0000,   -0.0000,  g_gain_y,   -0.0000,    0.0000,    0.0000,

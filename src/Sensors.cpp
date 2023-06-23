@@ -36,10 +36,11 @@
         Serial.println("FSM Init Finished..."); 
         delay(300);
         sample_fsm();
-        // while(!(data.gyroAccuracy == 3) && !(data.linAccuracy == 3) && !(data.quatAccuracy == 3) )
+        // while(!(data.gyroAccuracy == 3 && data.linAccuracy == 3 && data.quatAccuracy == 3 ) )
         // {
         //     sample_fsm();
         //     delay(250);
+        //     print_fsm();
         //     Serial.println("move vehicle to calibrate IMU ");
         // }
         //save current position of yaw as the zero. 
@@ -102,21 +103,25 @@
             //auto-calibrates and auto-records cal data roughly every 5 minutes
             }
         } 
+        
     } 
 
 
     void Sensors::sample_fsm(void)
     {
+
         if(fsm.dataAvailable() == true)
         {
+
+            save_calibrate_fsm();
             //..... Sample IMU .....//
             //... Linear Accel ...//
             //fsm.getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
 
             data.linAccuracy = fsm.getLinAccelAccuracy();
-            data.ay = IIR(fsm.getLinAccelX(), data.ax, .10);
-            data.ax = IIR(fsm.getLinAccelY(), data.ay, .10);
-            data.az = IIR(fsm.getLinAccelZ(), data.az, .10);
+            data.ay = IIR(fsm.getLinAccelX(), data.ax, _alpha_accel);
+            data.ax = IIR(fsm.getLinAccelY(), data.ay, _alpha_accel);
+            data.az = IIR(fsm.getLinAccelZ(), data.az, _alpha_accel);
 
             //... Gyro ...//
            // fsm.getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
@@ -125,9 +130,9 @@
             // data.gy = fsm.getFastGyroY();
             // data.gz = fsm.getFastGyroZ();
             data.gyroAccuracy = fsm.getGyroAccuracy();
-            data.gy = IIR(fsm.getGyroX(), data.gx, .12);
-            data.gx = IIR(fsm.getGyroY(), data.gy, .12);
-            data.gz = IIR(fsm.getGyroZ(), data.gz, .12);
+            data.gy = IIR(fsm.getGyroX(), data.gx, _alpha_gyro);
+            data.gx = IIR(fsm.getGyroY(), data.gy, _alpha_gyro);
+            data.gz = IIR(fsm.getGyroZ(), data.gz, _alpha_gyro);
             
             //... Rotation Vector ...//
             fsm.getQuat(data.qi, data.qj, data.qk, data.qw, data.quatRadianAccuracy, data.quatAccuracy);
@@ -136,104 +141,18 @@
             // data.qj = fsm.getQuatJ();
             // data.qk = fsm.getQuatK();
             // data.qw = fsm.getQuatReal();
+            // data.quatAccuracy = fsm.getQuatAccuracy();
+            // data.quatRadianAccuracy = fsm.getQuatRadianAccuracy();
 
 
             //... Euler Angle Representation ...//
             data.pitch = fsm.getRoll() + FSM_ROLL_OFFSET_RAD;
             data.roll = fsm.getPitch() + FSM_PITCH_OFFSET_RAD;
-            data.yaw = fsm.getYaw();    
+            data.yaw = fsm.getYaw() + FSM_YAW_OFFSET_RAD;    
             //data.yaw = 0.00f;
+
+            
         }
-    }
-
-
-    void Sensors::print_fsm(void)
-    {
-        char text[250];
-
-        sprintf(text, "%0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
-        r2d*data.roll,
-        r2d*data.pitch,
-        r2d*data.yaw,
-
-        r2d*data.gx,
-        r2d*data.gy,
-        r2d*data.gz,
-
-        data.ax,
-        data.ay,
-        data.az,
-
-        estimate.x,
-        estimate.y,
-        estimate.z,
-
-        estimate.vx,
-        estimate.vy,
-        estimate.vz,
-
-        data.linAccuracy,
-        data.gyroAccuracy,
-        data.quatAccuracy);
-
-        Serial.println(text);
-    }
-
-    void Sensors::print_fsm_calibration(void)
-    {
-        char text[250];
-
-        sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f    ",
-        r2d*data.roll,
-        r2d*data.pitch,
-        r2d*data.yaw,
-        data.qi,
-        data.qj,
-        data.qk,
-        data.qw,
-        r2d*data.gx,
-        r2d*data.gy,
-        r2d*data.gz,
-        data.ax,
-        data.ay,
-        data.az);
-
-        Serial.print(text);
-        Serial.print(data.linAccuracy);
-        Serial.print(", ");
-        Serial.print(data.gyroAccuracy);
-        Serial.print(", ");
-        Serial.print(data.quatAccuracy);
-        Serial.println(", ");
-    }
-    
-    void Sensors::print_estimator(void)
-    {
-        char text[250];
-
-        sprintf(text, "%0.5f, %0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
-        r2d*data.roll,
-        r2d*data.pitch,
-        r2d*data.yaw,
-        data.z,
-
-        estimate.x,
-        estimate.y,
-        estimate.z,
-
-        estimate.vx,
-        estimate.vy,
-        estimate.vz,
-
-        data.ax,
-        data.ay,
-        data.az,
-
-        data.linAccuracy,
-        data.gyroAccuracy,
-        data.quatAccuracy);
-
-        Serial.println(text);
     }
 
     //... FSM305 Functions End ...//
@@ -296,10 +215,10 @@
         // Z(1) = data.y;
     //}
 
-    //if( data.status.lidar == 1){
+    if( data.status.lidar == 1){
         H(2,2) = 1.0f;
         Z(2,1) = p[2]; // p[2]: z
-    //}
+    }
 
     // if( data.status.flow == 1){
     //     H(3,3) = 1; H(4,4) = 1;
@@ -319,13 +238,6 @@
     // Serial << " Xeafter: " <<  Xe << "\n";
     // Fil estimate struct with values (for telemetry and stuff)
 
-    data.ex = Xe(0);
-    data.ey = Xe(1);
-    data.ez = Xe(2);
-    data.evx = Xe(3);
-    data.evy = Xe(4);
-    data.evz = Xe(5);
-
     estimate.x = Xe(0);
     estimate.y = Xe(1);
     estimate.z = Xe(2);
@@ -344,8 +256,8 @@
 
         float p = data.roll;
         float q = data.pitch;
-        float u = data.yaw;
-
+        // float u = data.yaw;
+        float u = 0.00f;
         Matrix<3,1> in = { vector[0], vector[1], vector[2] };
         Matrix<3,1> out = {0,0,0};
 
@@ -370,13 +282,103 @@
     }
 
     // Rotate yaw to align with origin / home
-float Sensors::rotate_yaw( float yaw ){
+    float Sensors::rotate_yaw( float yaw )
+    {
 
-    float rotated{yaw - yaw_origin};
+        float rotated{yaw - yaw_origin};
 
-    if( rotated > PI ) rotated -= TWO_PI;
-    else if( rotated < -PI ) rotated += TWO_PI;
+        if( rotated > PI ) rotated -= TWO_PI;
+        else if( rotated < -PI ) rotated += TWO_PI;
+        
+        return rotated;
+
+    }
+
+    void Sensors::print_imu(void)
+    {
+        char text[250];
+
+        sprintf(text, "%0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
+        r2d*data.roll,
+        r2d*data.pitch,
+        r2d*data.yaw,
+
+        r2d*data.gx,
+        r2d*data.gy,
+        r2d*data.gz,
+
+        data.ax,
+        data.ay,
+        data.az,
+
+        estimate.x,
+        estimate.y,
+        estimate.z,
+
+        estimate.vx,
+        estimate.vy,
+        estimate.vz,
+
+        data.linAccuracy,
+        data.gyroAccuracy,
+        data.quatAccuracy);
+
+        Serial.println(text);
+    }
+
+    void Sensors::print_fsm(void)
+    {
+        char text[250];
+
+        sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f    ",
+        r2d*data.roll,
+        r2d*data.pitch,
+        r2d*data.yaw,
+        data.qi,
+        data.qj,
+        data.qk,
+        data.qw,
+        r2d*data.gx,
+        r2d*data.gy,
+        r2d*data.gz,
+        data.ax,
+        data.ay,
+        data.az);
+
+        Serial.print(text);
+        Serial.print(data.linAccuracy);
+        Serial.print(", ");
+        Serial.print(data.gyroAccuracy);
+        Serial.print(", ");
+        Serial.print(data.quatAccuracy);
+        Serial.println(", ");
+    }
     
-    return rotated;
+    void Sensors::print_estimator(void)
+    {
+        char text[250];
 
-}
+        sprintf(text, "%0.5f, %0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
+        r2d*data.roll,
+        r2d*data.pitch,
+        r2d*data.yaw,
+        data.z,
+
+        estimate.x,
+        estimate.y,
+        estimate.z,
+
+        estimate.vx,
+        estimate.vy,
+        estimate.vz,
+
+        data.ax,
+        data.ay,
+        data.az,
+
+        data.linAccuracy,
+        data.gyroAccuracy,
+        data.quatAccuracy);
+
+        Serial.println(text);
+    }

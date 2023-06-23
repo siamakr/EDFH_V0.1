@@ -21,18 +21,19 @@
         
     }
 
-    void Controller::edf_startup(int seconds)
+    bool Controller::edf_startup(int seconds)
     {
         //Make sure the edf motor is off
         act.edf.writeMicroseconds(EDF_OFF_PWM);
-        delay(10);
 
         float timer{millis()};
 
         while(millis() - timer <= seconds * 1000)
         {
-            act.edf.writeMicroseconds(EDF_MIN_PWM);
+            act.edf.writeMicroseconds(EDF_MIN_PWM+50);
         }
+
+        return true;
     }
 
 
@@ -88,8 +89,8 @@
         // cd.angle_x = limit(IIRF(cd.angle_xx, cd.u(0), 0.08), d2r * -8.00f, d2r * 8.00f);
         // cd.angle_y = limit(IIRF(cd.angle_yy, cd.u(1), 0.08), d2r * -8.00f, d2r * 8.00f);
 
-        cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.04), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
-        cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.04), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.14), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.14), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
         cd.Tedf = limit(Tm, 15.00f, 31.00f);
 
         debug(4) = r2d*cd.angle_xx;
@@ -121,8 +122,10 @@
         //Envoke Matricies on the function stack and initialize them
         Matrix<4,1> U = {0.00}; // Control Vector
         Matrix<12,1> error {0.00}; // State error vector
+        Matrix<4,12> K = K_int;
         Matrix<12,1> REF = SP_hover_int;         //store desired setpoint (either by user or from Position Controller Output)
         Matrix<12,1> Xs = {0.00};     //State Vector
+        Matrix<4,1> U_out = {0.00f};
 
           //load state vecotr
         Xs = {r, p, y, gx, gy, gz, 0, 0};
@@ -139,25 +142,20 @@
         //Calculate integral action and put updated error values back into error matrix
         //the cd.e_int(•) term is the previous error in the integral positions in error vector
         //altitude integral action 
-        error(8)  = ( ( error(7) >= (-1 * _int_bound_alt) ) || ( error(7) <= _int_bound_alt ) ) ? cd.e_int(8) + (error(7) * DT_SEC) : 0.00f;       
+        error(8)  = ( ( error(7) >= (-1 * _int_bound_alt) ) || ( error(7) <= _int_bound_alt ) ) ? error(8) + ( _gain_z_int     * error(7) * DT_SEC) : 0.00f;       
         //attitude integral actions
-        error(9)  = ( ( error(1) >= (-1 * _int_bound_att) ) || ( error(1) <= _int_bound_att ) ) ? cd.e_int(9) + (error(1) * DT_SEC) : 0.00f;       
-        error(10) = ( ( error(2) >= (-1 * _int_bound_att) ) || ( error(2) <= _int_bound_att ) ) ? cd.e_int(10) + (error(2) * DT_SEC) : 0.00f;       
-        error(11) = ( ( error(3) >= (-1 * _int_bound_att) ) || ( error(3) <= _int_bound_att ) ) ? cd.e_int(11) + (error(3) * DT_SEC) : 0.00f;  
+        error(9)  = ( ( error(1) >= (-1 * _int_bound_att) ) || ( error(1) <= _int_bound_att ) ) ? error(9) + ( _gain_roll_int  * error(1) * DT_SEC) : 0.00f;       
+        error(10) = ( ( error(2) >= (-1 * _int_bound_att) ) || ( error(2) <= _int_bound_att ) ) ? error(10) + ( _gain_pitch_int * error(2) * DT_SEC) : 0.00f;       
+        error(11) = ( ( error(3) >= (-1 * _int_bound_att) ) || ( error(3) <= _int_bound_att ) ) ? error(11) + ( _gain_yaw_int   * error(3) * DT_SEC) : 0.00f;  
 
         error(9) = limit(error(9), -_max_int_def, _max_int_def);     
         error(10) = limit(error(10), -_max_int_def, _max_int_def);     
         error(11) = limit(error(11), -_max_int_def, _max_int_def);     
        
-       //clamp the outputs of the integral action also with a limiter 
-        debug(12) = r2d*error(9);
-        debug(13) = r2d*error(10);
-        debug(14) = r2d*error(11);
-        debug(15) = error(8);
-       
+
     
         //Run LQR Controller + full integral action
-        U = -K_int * error;
+        U = -K * error;
 
         //Update the EDF motor control signal with Vehicle weight
         //U(3) += MASS * G;         //Normal Mode
@@ -173,10 +171,12 @@
         float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (MASS_EDF * sin(U(1))) };
         float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
 
-        debug(16) = 111111.00f;
-        debug(17) = Tx;
-        debug(18) = Ty;
-        debug(19) = Tz;
+        //Calculate each component of the Thrust Vector
+        // float Tx{ U(3) * sin(U(0)) };
+        // float Ty{ U(3) * sin(U(1)) * cos(U(0)) };
+        // float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
+
+
 
         //Get the magnitude of the thrust vector components 
         float Tm = sqrt(pow(Tx,2) + pow(Ty,2) + pow(Tz,2));
@@ -190,8 +190,12 @@
         
         //Using the  EmboRockETH paper's outline of attaining gimbal angles 
         //from each thrust vector component and magnitude of thrust. 
-        cd.angle_xx = limit(asin(Tx/(Tm )), -1 * MAX_TVC_DEFLECTION_RAD , MAX_TVC_DEFLECTION_RAD);
-        cd.angle_yy = limit(asin(Ty/(Tm)), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_xx = limit(IIRF(asin(Tx/(Tm)),             cd.u_output(3), _alpha_servo), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_yy = limit(IIRF(asin(Ty/(Tm)),             cd.u_output(4), _alpha_servo), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+
+        //Feedforward 
+        cd.angle_xx -= error(0) * _gain_ff_roll;
+        cd.angle_yy -= error(1) * _gain_ff_pitch;
 
         // cd.angle_xx = limit(asin(Tx/(Tm - pow(Ty,2))), -1 * MAX_TVC_DEFLECTION_RAD , MAX_TVC_DEFLECTION_RAD);
         // cd.angle_yy = limit(asin(Ty/Tm), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
@@ -208,15 +212,17 @@
         //filtering and limiting in one line 
         // cd.angle_x = limit(IIRF(cd.angle_xx, cd.u(0), 0.08), d2r * -8.00f, d2r * 8.00f);
         // cd.angle_y = limit(IIRF(cd.angle_yy, cd.u(1), 0.08), d2r * -8.00f, d2r * 8.00f);
+        float u0 = U(0);
+        float u1 = U(1);
 
-        cd.angle_x = limit(IIRF(U(0), cd.u(0), 0.04), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
-        cd.angle_y = limit(IIRF(U(1), cd.u(1), 0.04), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_x = limit(IIRF(u0, cd.u_output(0), _alpha_servo), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
+        cd.angle_y = limit(IIRF(u1, cd.u_output(1), _alpha_servo), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
         cd.Tedf = limit(Tm, 15.00f, 31.00f);
 
-        debug(6) = r2d*cd.angle_xx;
-        debug(7) = r2d*cd.angle_x;
-        debug(10) = r2d*cd.angle_yy;
-        debug(11) = r2d*cd.angle_y;
+        if(isnan(cd.angle_x)) cd.angle_x = 0.00f;
+        if(isnan(cd.angle_y)) cd.angle_y = 0.00f;
+
+
         
         //Actuate servos/edf motor 
         act.writeXservo((float) (r2d * -cd.angle_xx));
@@ -224,11 +230,16 @@
         act.writeEDF((float) cd.Tedf);
 
         //Store debug/filtering data into struct
-
-        cd.u = U;
-        cd.e_int = error; 
-        cd.Tm = Tm;
+        cd.u_output(0) = cd.angle_x;
+        cd.u_output(1) = cd.angle_y;
+        cd.u_output(2) = cd.angle_xx;
+        cd.u_output(3) = cd.angle_yy;
         
+        cd.u = U;
+
+        cd.e_int = error; 
+    
+        cd.Tm = Tm;
         cd.Tx = Tx; 
         cd.Ty = Ty; 
         cd.Tz = Tz;
@@ -258,6 +269,15 @@
     void Controller::set_reference( control_setpoint_t cs, float value ){
         value = value * d2r;
 
+        // switch( cs ){
+        //     // case SETPOINT_X: SP_pos(0) = value; break;
+        //     // case SETPOINT_Y: SP_pos(1) = value; break;
+        //     // case SETPOINT_Z: SP_hover(6) = value; break;
+        //     case SETPOINT_ROLL: SP_hover_int(0) = value; break;
+        //     case SETPOINT_PITCH: SP_hover_int(1) = value; break;
+        //     case SETPOINT_YAW: SP_hover_int(2) = value; break;
+        // }
+
         switch( cs ){
             // case SETPOINT_X: SP_pos(0) = value; break;
             // case SETPOINT_Y: SP_pos(1) = value; break;
@@ -274,7 +294,7 @@
 
     float Controller::limit(float value, float min, float max)
     {
-        return value < min ? min : (value > max ? max : value); 
+        return value <= min ? min : (value >= max ? max : value); 
     }
 
     float Controller::IIRF(float newSample, float prevOutput, float alpha)

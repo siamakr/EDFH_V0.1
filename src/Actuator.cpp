@@ -19,11 +19,11 @@ void Actuator::init(void)
 void Actuator::init_servos(void)
 {
     //attach servo pins
-    sx.attach(XSERVO_PIN, SERVO_X_MIN_US, SERVO_X_MAX_US);
-    //sx.attach(XSERVO_PIN);
+    //sx.attach(XSERVO_PIN, SERVO_X_MIN_US, SERVO_X_MAX_US);
+    sx.attach(XSERVO_PIN);
     delay(10);
-    sy.attach(YSERVO_PIN, SERVO_Y_MIN_US, SERVO_Y_MAX_US);
-    //sy.attach(YSERVO_PIN);
+    //sy.attach(YSERVO_PIN, SERVO_Y_MIN_US, SERVO_Y_MAX_US);
+    sy.attach(YSERVO_PIN);
     delay(10);
     // rw.attach(RW_PIN);
     // delay(200);
@@ -64,12 +64,13 @@ void Actuator::prime_edf(int delay_time_ms)
 
 bool Actuator::prime_edf(int delay_time_ms, float start_timer)
 {
-    while((millis() - start_timer) < delay_time_ms)
+    edf.writeMicroseconds(EDF_MIN_PWM);
+    if((millis() - start_timer) < delay_time_ms)
     {
-        edf.writeMicroseconds(EDF_MIN_PWM);
+        return true;
+    }else{
+    return false;
     }
-    
-    return true;
 }
 
 bool Actuator::servo_dance_x(float max_angle, int delay_time_ms)
@@ -114,7 +115,6 @@ void Actuator::writeXservo(float angle)
 
 void Actuator::writeXservo(int pwm)
 {
-
     ad.pwmx = pwm;
     sx.writeMicroseconds(pwm);  
 }
@@ -159,7 +159,9 @@ void Actuator::emergency_check(float & r, float & p)
 {
     if(r > MAX_VEHICLE_ANGLE_DEG || r < -MAX_VEHICLE_ANGLE_DEG || p > MAX_VEHICLE_ANGLE_DEG || p < -MAX_VEHICLE_ANGLE_DEG)
     {
-        suspend();
+        edf_shutdown();
+        zero_servos();
+        while(1);       //This should return the state machine into hold state
     }
 }
 

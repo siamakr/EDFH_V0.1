@@ -15,12 +15,15 @@ using namespace BLA;
 
 //..... Defines .....//
 #define DT_MSEC 10.00f
-#define DT_SEC (0.01)
+#define DT_SEC (0.0010)
 #define d2r (PI/180.00f)
 #define r2d (180.00f/PI)
 
-#define FSM_ROLL_OFFSET_RAD (d2r * -1.28331)
-#define FSM_PITCH_OFFSET_RAD (d2r * -2.18253)
+#define FSM_PITCH_OFFSET_RAD (d2r * 0.858f)
+#define FSM_ROLL_OFFSET_RAD (d2r * 2.13f)
+#define FSM_YAW_OFFSET_RAD (d2r * 0.00f)
+// #define FSM_ROLL_OFFSET_RAD (d2r * -1.28331)
+// #define FSM_PITCH_OFFSET_RAD (d2r * -2.18253)
 
 
 //..... SPI Pin Definitons .....//
@@ -75,8 +78,8 @@ class Sensors
 
 public:
 
-    fsm_data_t data;
-    estimator_data_t estimate;
+fsm_data_t data;
+estimator_data_t estimate;
     BNO080 fsm;
     LIDARLite_v3HP garmin;
     uint16_t distance;
@@ -127,16 +130,25 @@ public:
                        -0.0000,    0.0000,   -0.0000,   -0.0000,    0.1057,   -0.0000,
                         0.0000,   -0.0000,    1.3001,    0.0000,   -0.0000,    0.0000  }; */
 
-
-     Matrix<6,6> Kf = {  0.0345,    0.0000,   0.0000,    0.0019,    0.0000,    0.0000,
+    /* Matrix<6,6> Kf = {  0.0345,    0.0000,   0.0000,    0.0019,    0.0000,    0.0000,
                         0.0000,    0.0345,   0.0000,    0.0000,    0.0019,    0.0000,
                         0.0000,    0.0000,   0.0274,    0.0000,    0.0000,    0.0001,
                         0.1495,    0.0000,   0.0000,    0.0216,    0.0000,    0.0000,
                         0.0000,    0.1495,   0.0000,    0.0000,    0.0216,    0.0000,
-                        0.0000,    0.0000,   0.0767,    0.0000,    0.0000,    0.0004    };
+                        0.0000,    0.0000,   0.0767,    0.0000,    0.0000,    0.0004    }; */
+
+    Matrix<6,6> Kf = {  0.618520, 0.000000, 0.000000, 0.000330, 0.000000, 0.000000,
+                        0.000000, 0.618520, 0.000000, 0.000000, 0.000330, 0.000000,
+                        0.000000, 0.000000, 0.318880, 0.000000, 0.000000, 0.000420,
+                        0.162570, 0.000000, 0.000000, 0.131210, 0.000000, 0.000000,
+                        0.000000, 0.162570, 0.000000, 0.000000, 0.131210, 0.000000,
+                        0.000000, 0.000000, 4.190280, 0.000000, 0.000000, 0.045440   };
 
     
-
+        //FILTER PARAMS
+    float _alpha_gyro{0.10};                //GYROSCOPE FILTER ALPHA
+    float _alpha_servo{0.07};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
+    float _alpha_accel{0.15};               //ACCELEROMETER SIGNAL FILTER ALPHA 
 
 
 
@@ -157,12 +169,6 @@ public:
  
     void sample_fsm(void);
 
-    void print_fsm(void);
-
-    void print_fsm_calibration(void);
-
-    void print_estimator(void);
-
     void sample_lidar(void);
 
     void run_estimator(void);
@@ -174,6 +180,12 @@ public:
     float IIR(float newSample, float prevOutput, float alpha);
 
     void print_debug(void);
+
+    void print_imu(void);
+
+    void print_fsm(void);
+
+    void print_estimator(void);
 
 
 
