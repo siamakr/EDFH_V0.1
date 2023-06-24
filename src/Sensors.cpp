@@ -119,8 +119,8 @@
             //fsm.getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
 
             data.linAccuracy = fsm.getLinAccelAccuracy();
-            data.ay = IIR(fsm.getLinAccelX(), data.ax, _alpha_accel);
-            data.ax = IIR(fsm.getLinAccelY(), data.ay, _alpha_accel);
+            data.ay = IIR(fsm.getLinAccelX(), data.ay, _alpha_accel);
+            data.ax = IIR(fsm.getLinAccelY(), data.ax, _alpha_accel);
             data.az = IIR(fsm.getLinAccelZ(), data.az, _alpha_accel);
 
             //... Gyro ...//
@@ -130,8 +130,8 @@
             // data.gy = fsm.getFastGyroY();
             // data.gz = fsm.getFastGyroZ();
             data.gyroAccuracy = fsm.getGyroAccuracy();
-            data.gy = IIR(fsm.getGyroX(), data.gx, _alpha_gyro);
-            data.gx = IIR(fsm.getGyroY(), data.gy, _alpha_gyro);
+            data.gy = IIR(fsm.getGyroX(), data.gy, _alpha_gyro);
+            data.gx = IIR(fsm.getGyroY(), data.gx, _alpha_gyro);
             data.gz = IIR(fsm.getGyroZ(), data.gz, _alpha_gyro);
             
             //... Rotation Vector ...//
@@ -189,7 +189,7 @@
     // Rotate lidar measurement to world frame
     p[2] = data.z;
     rotate_to_world( p );
-
+    data.ez = p[2];
 
     // Perform gyrocompensation on flow and rotate to world frame.
     // v[0] = data.vx * p[2] + data.gy * p[2];
@@ -215,10 +215,10 @@
         // Z(1) = data.y;
     //}
 
-    if( data.status.lidar == 1){
+  //  if( data.status.lidar == 1){
         H(2,2) = 1.0f;
         Z(2,1) = p[2]; // p[2]: z
-    }
+   // }
 
     // if( data.status.flow == 1){
     //     H(3,3) = 1; H(4,4) = 1;

@@ -15,7 +15,8 @@
 #define COM_TO_TVC 0.1335                                       //m
 #define ledf .050                                               //m
 #define MASS_EDF .700                                           //Kg
-#define MASS 2.757                                              //Kg
+//#define MASS 2.757                                              //Kg
+#define MASS 2.9                                              //Kg
 #define MAX_TVC_DEFLECTION_DEG 10.00f                           //deg
 #define MAX_TVC_DEFLECTION_RAD (d2r * MAX_TVC_DEFLECTION_DEG)   //rad
 #define G 9.87                                                  //m/s^2
@@ -72,7 +73,7 @@ public:
     Actuator act;
     controller_data_t cd;
     control_setpoint_t setpoint; 
-    Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};    //Desired Reference
+    Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.60,0.00};    //Desired Reference
     Matrix<12,1> SP_hover_int = {0.00};    //Desired Reference
     control_status_t status;
 
@@ -115,12 +116,12 @@ private:
     volatile float _gain_pitch{_gain_roll};          //PITCH GAIN
     volatile float _gain_yaw{.0316};                 //YAW GAIN
 
-    volatile float _gain_gx{0.1140};                 //GX GAIN
+    volatile float _gain_gx{0.1240};                 //GX GAIN
     volatile float _gain_gy{_gain_gx};               //GY GAIN 
     volatile float _gain_gz{.0561};                  //GZ GAIN
 
-    volatile float _gain_vz{5.42};                   //ALT VELOCITY
-    volatile float _gain_z{3.0942};                  //ALTITUDE
+    volatile float _gain_vz{-30.42};                   //ALT VELOCITY
+    volatile float _gain_z{-24.0942};                  //ALTITUDE
     volatile float _gain_z_int{.1};                  //ALTITUDE INTEGRAL GAIN
 
     volatile float _gain_roll_int{.05};              //ROLL INTEGRAL GAIN

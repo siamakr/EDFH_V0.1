@@ -44,11 +44,13 @@ void setup() {
   // Serial.println("Serial Started...");
 
   // //Servo inits
-  control.act.init_servos();
-  control.act.init_edf();
-  delay(100);
-  control.act.zero_servos();
-  delay(100);
+  // control.act.init_servos();
+  // control.act.init_edf();
+  // delay(100);
+  // control.act.zero_servos();
+  // delay(100);
+
+
   //control.edf_startup(5);
   delay(200);
  // control.init();
@@ -167,7 +169,7 @@ void loop() {
     }
 
     //..... Estimator Timer .....//   
-    if(millis() - estimator_timer >= DT_MSEC )
+    if(millis() - estimator_timer >= DT_MSEC  )
     {
       estimator_timer = millis();
       sensor.run_estimator();
@@ -188,7 +190,7 @@ void loop() {
 
     }
 
-    step_response_state_machine(2000, 3.00f);
+    //step_response_state_machine(2000, 3.00f);
   }
 
   // }else{
@@ -232,7 +234,7 @@ void run_hover_program(void){
                     sensor.data.gx, 
                     sensor.data.gy, 
                     sensor.data.gz, 
-                    sensor.estimate.z, 
+                    sensor.data.ez, 
                     sensor.estimate.vz);
     // */
 
@@ -250,12 +252,13 @@ void run_hover_program(void){
     }
 
     //..... Print Timer .....//
-    if(millis() - print_timer >= (DT_MSEC * 10)  ) //DT_MSEC * 4 = 40mS
+    if(millis() - print_timer >= (DT_MSEC * 5)  ) //DT_MSEC * 4 = 40mS
     {
       print_timer = millis();
       //control.print_debug();
-      print_control_imu();
+      //print_control_imu();
       //sensor.print_estimator();
+      print_control_imu_estimater();
     // print_estimator_main();
 
     }
@@ -273,42 +276,49 @@ void step_response_state_machine(float step_interval_ms, float angle)
   {
     control.set_reference(SETPOINT_PITCH, 0.00f);
     control.set_reference(SETPOINT_ROLL , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.00f);
   }
 
   else if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3))
   {
-    control.set_reference(SETPOINT_PITCH, -angle);
+    control.set_reference(SETPOINT_PITCH, 0.00f);
     control.set_reference(SETPOINT_ROLL , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.00f);
   }
 
   else if(elapsed_time >= ( step_interval_ms * 3 ) && elapsed_time < (step_interval_ms * 4))
   {
-    control.set_reference(SETPOINT_PITCH, angle);
+    control.set_reference(SETPOINT_PITCH, 0.00f);
     control.set_reference(SETPOINT_ROLL , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.00f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 4) && elapsed_time <= (step_interval_ms * 5))
   {
     control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , -angle);
+    control.set_reference(SETPOINT_ROLL , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.00f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 5) && elapsed_time < (step_interval_ms * 6))
   {
     control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , angle);
+    control.set_reference(SETPOINT_ROLL , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.60f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 6) && (elapsed_time < step_interval_ms * 7))
   {
-    control.set_reference(SETPOINT_PITCH, angle);
-    control.set_reference(SETPOINT_ROLL , -angle);
+    control.set_reference(SETPOINT_PITCH, 0.00f);
+    control.set_reference(SETPOINT_ROLL , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.60f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 7) && (elapsed_time < step_interval_ms * 8))
   {
-    control.set_reference(SETPOINT_PITCH, angle);
-    control.set_reference(SETPOINT_ROLL , -angle);
+    control.set_reference(SETPOINT_PITCH, 0.00f);
+    control.set_reference(SETPOINT_ROLL , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.00f);
   }
 
   // if(elapsed_time >= (step_interval_ms * 8) && (elapsed_time < step_interval_ms * 9))
@@ -358,7 +368,7 @@ void step_response_state_machine(float step_interval_ms, float angle)
     control.act.edf_shutdown();
     control.act.zero_servos();
     //while(1);
-    control.status = CONTROL_STATUS_STATIONARY;
+   // control.status = CONTROL_STATUS_STATIONARY;
   }
 
 
@@ -379,15 +389,15 @@ void print_control_imu(void)
       r2d*control.SP_hover_int(1),
     r2d*sensor.data.yaw,
 
-    r2d*sensor.data.gx,
-    r2d*sensor.data.gy,
-    r2d*sensor.data.gz,
+    r2d*sensor.data.ax,
+    r2d*sensor.data.ay,
+    r2d*sensor.data.az,
 
-    sensor.data.ax,
-    sensor.data.ay,
-    sensor.data.az,
-
-    r2d*control.cd.angle_x,
+    sensor.estimate.vz,
+    sensor.estimate.z,
+    sensor.data.z,
+    sensor.data.ez,
+    //r2d*control.cd.angle_x,
     r2d*control.cd.angle_xx,
       control.act.ad.pwmx,
 
@@ -410,7 +420,7 @@ void print_control_imu_estimater(void)
 {
   char text[250];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f, %0.5f,\t %0.5f, %0.5f,\t %0.5f,\t %0.5f, %0.5f, %0.5f,\t %0.5f, %0.5f, %0.5f, \t %0.5f, %0.5f,%i,\t %0.5f, %05f, %i,\t %0.5f, %i,\t %i, %i, %i ",
+  sprintf(text, "%0.5f, %0.5f,\t %0.5f, %0.5f,\t %0.5f,  \t %0.5f, %0.5f, %0.5f,  \t %0.5f, %0.5f, %0.5f,   \t %0.5f, %0.5f,%0.5f,  \t %0.5f, %05f, %0.5f,\t %0.5f, %i,\t %i, %i, %i ",
     r2d*sensor.data.roll,
       r2d*control.SP_hover_int(0),
     r2d*sensor.data.pitch,
@@ -426,13 +436,13 @@ void print_control_imu_estimater(void)
     sensor.estimate.vz,
     //sensor.data.z,
 
-    r2d*control.cd.angle_x,
-    r2d*control.cd.angle_xx,
-      control.act.ad.pwmx,
+    sensor.estimate.z,
+    sensor.data.z,
+    sensor.data.ez,
 
-    r2d*control.cd.angle_y,
-    r2d*control.cd.angle_yy,
-      control.act.ad.pwmy,
+    sensor.data.ax,
+    sensor.data.ay,
+    sensor.data.az,
 
     control.cd.Tedf,
       control.act.ad.pwmedf,

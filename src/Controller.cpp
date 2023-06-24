@@ -128,12 +128,8 @@
         Matrix<4,1> U_out = {0.00f};
 
           //load state vecotr
-        Xs = {r, p, y, gx, gy, gz, 0, 0};
+        Xs = {r, p, y, gx, gy, gz, z, vz};
 
-        debug(0) = r2d*r;
-        debug(1) = r2d*p;
-        debug(2) = r2d*y;
-        debug(3) = 111111.00f;
 
         //calculate reference error
         error = Xs - REF;
@@ -142,7 +138,7 @@
         //Calculate integral action and put updated error values back into error matrix
         //the cd.e_int(•) term is the previous error in the integral positions in error vector
         //altitude integral action 
-        error(8)  = ( ( error(7) >= (-1 * _int_bound_alt) ) || ( error(7) <= _int_bound_alt ) ) ? error(8) + ( _gain_z_int     * error(7) * DT_SEC) : 0.00f;       
+        //error(8)  = ( ( error(7) >= (-1 * _int_bound_alt) ) || ( error(7) <= _int_bound_alt ) ) ? error(8) + ( _gain_z_int     * error(7) * DT_SEC) : 0.00f;       
         //attitude integral actions
         error(9)  = ( ( error(1) >= (-1 * _int_bound_att) ) || ( error(1) <= _int_bound_att ) ) ? error(9) + ( _gain_roll_int  * error(1) * DT_SEC) : 0.00f;       
         error(10) = ( ( error(2) >= (-1 * _int_bound_att) ) || ( error(2) <= _int_bound_att ) ) ? error(10) + ( _gain_pitch_int * error(2) * DT_SEC) : 0.00f;       
@@ -158,8 +154,8 @@
         U = -K * error;
 
         //Update the EDF motor control signal with Vehicle weight
-        //U(3) += MASS * G;         //Normal Mode
-        U(3) = MASS * G;            //Hold-down Gimbal test Mode
+        U(3) += MASS * G;         //Normal Mode
+        //U(3) = MASS * G;            //Hold-down Gimbal test Mode
 
         //Thrust in each axis with corrected torque term 
         //due to the change in J when the EDF motor is actuated. 
@@ -167,14 +163,14 @@
         //edf motor.
 
         //Calculate each component of the Thrust Vector
-        float Tx{ U(3) * sin(U(0)) - (MASS_EDF * sin(U(0)))};
-        float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (MASS_EDF * sin(U(1))) };
-        float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
+        // float Tx{ U(3) * sin(U(0)) - (MASS_EDF * sin(U(0)))};
+        // float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (MASS_EDF * sin(U(1))) };
+        // float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
 
         //Calculate each component of the Thrust Vector
-        // float Tx{ U(3) * sin(U(0)) };
-        // float Ty{ U(3) * sin(U(1)) * cos(U(0)) };
-        // float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
+        float Tx{ U(3) * sin(U(0)) };
+        float Ty{ U(3) * sin(U(1)) * cos(U(0)) };
+        float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
 
 
 
@@ -281,7 +277,7 @@
         switch( cs ){
             // case SETPOINT_X: SP_pos(0) = value; break;
             // case SETPOINT_Y: SP_pos(1) = value; break;
-            // case SETPOINT_Z: SP_hover(6) = value; break;
+             case SETPOINT_Z: SP_hover_int(6) = value; break;
             case SETPOINT_ROLL: SP_hover_int(0) = value; break;
             case SETPOINT_PITCH: SP_hover_int(1) = value; break;
             case SETPOINT_YAW: SP_hover_int(2) = value; break;
