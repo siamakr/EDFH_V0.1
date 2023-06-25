@@ -33,6 +33,7 @@ void step_response_state_machine(float step_interval_ms, float angle);
 void run_hover_program(void);
 void print_control_imu_estimater(void);
 void print_estimator_main();
+void print_controller(void);
 void user_read_int(int & value, String message);
 void user_read_anykey(String message);
 void user_read_float(float & value, String message);
@@ -65,6 +66,7 @@ void setup() {
   // sensor.fsm_init();
   control.status = CONTROL_STATUS_EDF_PRIMING;
   init_timer = millis();
+//  control.set_reference(SETPOINT_Z, 0.55f);
 }
 
 // void loop() {
@@ -157,13 +159,13 @@ void loop() {
       sensor.sample_lidar();
       //sensor.run_estimator();
 
-      control.lqr_int(sensor.data.roll, 
+      control.lqr(sensor.data.roll, 
                     sensor.data.pitch, 
                     sensor.data.yaw, 
                     sensor.data.gx, 
                     sensor.data.gy, 
                     sensor.data.gz, 
-                    sensor.estimate.z, 
+                    sensor.data.ez, 
                     sensor.estimate.vz);
 
     }
@@ -184,7 +186,8 @@ void loop() {
       print_timer = millis();
       //control.print_debug();
       //print_control_imu();
-      print_control_imu_estimater();
+      //print_control_imu_estimater();
+      print_controller();
       //sensor.print_estimator();
     // print_estimator_main();
 
@@ -439,6 +442,49 @@ void print_control_imu_estimater(void)
     sensor.estimate.z,
     sensor.data.z,
     sensor.data.ez,
+
+    sensor.data.ax,
+    sensor.data.ay,
+    sensor.data.az,
+
+    control.cd.Tedf,
+      control.act.ad.pwmedf,
+
+    sensor.data.linAccuracy,
+    sensor.data.gyroAccuracy,
+    sensor.data.quatAccuracy);
+
+  Serial.println(text);
+
+}
+
+void print_controller(void)
+{
+  char text[250];
+  //              roll  rollsp    pitch  pitchsp    yaw        deltax deltay deltax deltay  u0    u1      u2      u3        estvz estz    dataz   dataez  ax      ay    az        Tedf    pwmedf   
+  sprintf(text, "%0.5f, %0.5f,      %0.5f, %0.5f,       %0.5f,        %0.5f, %0.5f,  %0.5f,  %0.5f,       %0.5f,  %0.5f,  %0.5f,  %0.5f,        %0.5f,  %0.5f,  %0.5f,  %0.5f,  %0.5f,      %0.5f,  %05f,  %0.5f,      %0.5f, %i,       %i, %i, %i ",
+    r2d*sensor.data.roll,
+    r2d*control.SP_hover_int(0),
+    r2d*sensor.data.pitch,
+    r2d*control.SP_hover_int(1),
+
+    r2d*sensor.data.yaw,
+
+    r2d*control.cd.delta_xx,
+    r2d*control.cd.delta_x,
+    r2d*control.cd.delta_yy,
+    r2d*control.cd.delta_y,
+
+    r2d*control.cd.u(0),
+    r2d*control.cd.u(1),
+    control.cd.u(2),
+    control.cd.u(3),
+
+    sensor.estimate.vz,
+    sensor.estimate.z,
+    sensor.data.z,
+    sensor.data.ez,
+    control.SP_hover_int(6),
 
     sensor.data.ax,
     sensor.data.ay,

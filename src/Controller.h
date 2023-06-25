@@ -40,6 +40,7 @@ typedef struct
 {
     int pwmx, pwmy, pwmedf, pwmrw;
     float angle_x, angle_xx, angle_y, angle_yy, Tm, Tx, Ty, Tz, Tedf;
+    float delta_x, delta_y, delta_xx, delta_yy;
     float trq_rw, trq_x, trq_y; 
     Matrix<8,1> e = {0.00f};
     Matrix<12,1> e_int = {0.00f};
@@ -74,7 +75,7 @@ public:
     controller_data_t cd;
     control_setpoint_t setpoint; 
     Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.60,0.00};    //Desired Reference
-    Matrix<12,1> SP_hover_int = {0.00};    //Desired Reference
+    Matrix<12,1> SP_hover_int = {0.00f,0.00f,0.00f,  0.00f,0.00f,0.00f,  0.650f,0.00f,0.00f,  0.00f,0.00f,0.00f};    //Desired Reference
     control_status_t status;
 
 
@@ -105,8 +106,11 @@ private:
 
 
     float limit(float value, float min, float max);
+    void LIMIT(float & value, float min, float max);
 
     float IIRF(float newSample, float prevOutput, float alpha);
+
+    void IIR(float & new_sample, float prev_output, float alpha);
     //Feedforward gains
     volatile float _gain_ff_roll{0.085};
     volatile float _gain_ff_pitch{0.085};
@@ -120,12 +124,12 @@ private:
     volatile float _gain_gy{_gain_gx};               //GY GAIN 
     volatile float _gain_gz{.0561};                  //GZ GAIN
 
-    volatile float _gain_vz{-30.42};                   //ALT VELOCITY
-    volatile float _gain_z{-24.0942};                  //ALTITUDE
-    volatile float _gain_z_int{.1};                  //ALTITUDE INTEGRAL GAIN
+    volatile float _gain_z{12.90};                   //ALT VELOCITY
+    volatile float _gain_vz{8.6942};                  //ALTITUDE
+    volatile float _gain_z_int{0.00f};                  //ALTITUDE INTEGRAL GAIN
 
-    volatile float _gain_roll_int{.05};              //ROLL INTEGRAL GAIN
-    volatile float _gain_pitch_int{.05};             //PITCH INTEGRAL GAIN       
+    volatile float _gain_roll_int{2.5};              //ROLL INTEGRAL GAIN
+    volatile float _gain_pitch_int{2.5};             //PITCH INTEGRAL GAIN       
     volatile float _gain_yaw_int{-.0001};               //YAW INTEGRAL GAIN
 
     volatile float _int_bound_att{d2r * 2.00f};
@@ -156,7 +160,7 @@ private:
     Matrix<4,12> K_int = { _gain_roll,      -0.0000,        0.0000,     _gain_gx,   -0.0000,    0.0000,     0.0000,     0.0000,     -0.0000,        _gain_roll_int, 0.0000,             0.0000,
                             0.0000,         _gain_pitch,    0.0000,     -0.0000,    _gain_gy,   -0.0000,    0.0000,     0.0000,     -0.0000,        0.0000,         _gain_pitch_int,    0.0000,
                            -0.0000,         0.0000,         _gain_yaw,  -0.0000,    0.0000,     _gain_gz,   0.0000,     0.0000,     -0.0000,        0.0000,         0.0000,             _gain_yaw_int,
-                            0.0000,         0.0000,         0.0000,     -0.0000,    0.0000,     0.0000,     _gain_vz,   _gain_z,    _gain_z_int,    0.0000,         0.0000,             0.0000};
+                            0.0000,         0.0000,         0.0000,     -0.0000,    0.0000,     0.0000,     _gain_z,   _gain_vz,    _gain_z_int,    0.0000,         0.0000,             0.0000};
 
 
     //These are debug matricies to use its matrix print function
