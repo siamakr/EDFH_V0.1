@@ -69,7 +69,7 @@ bool Actuator::prime_edf(int delay_time_ms, float start_timer)
     {
         return true;
     }else{
-    return false;
+        return false;
     }
 }
 
@@ -124,9 +124,9 @@ void Actuator::writeYservo(float angle)
 {
     //Map TVC angle (degrees) to TVC PWM(µs) 
     int pwmY{ round(Y_P1 * pow(angle,2) + Y_P2 * (angle) + Y_P3 ) };      // using polynomial regression coefficients to map tvc angle to pwm vals
+    sy.writeMicroseconds(pwmY);
     ad.pwmy = pwmY;
     ad.ang_y = angle;
-    sy.writeMicroseconds(pwmY);
 }
 
 void Actuator::writeYservo(int pwm)
@@ -137,9 +137,9 @@ void Actuator::writeYservo(int pwm)
 
 void Actuator::writeEDF(float Ft)
 {
-    int pwm{ round( (EDF_P1 * Ft*Ft) + EDF_P2 * Ft + EDF_P3 )};
-    ad.pwmedf = pwm; 
+    int pwm{ round( (EDF_P1 * pow(Ft,2)) + EDF_P2 * Ft + EDF_P3 )};
     edf.writeMicroseconds(pwm);   
+    ad.pwmedf = pwm; 
 }
 
 void Actuator::writeEDF(int pwm)

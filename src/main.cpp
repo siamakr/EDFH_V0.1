@@ -42,231 +42,118 @@ void user_read_float(float & value, String message);
 void setup() {
 
   Serial.begin(115200);
-  // Serial.println("Serial Started...");
-
   // //Servo inits
-  // control.act.init_servos();
-  // control.act.init_edf();
-  // delay(100);
-  // control.act.zero_servos();
-  // delay(100);
-
-
-  //control.edf_startup(5);
+  control.act.init_servos();
+  control.act.init_edf();
+  control.act.zero_servos();
   delay(200);
  // control.init();
-
   //Sensors init
   sensor.lidar_init();
-  delay(100);
   sensor.fsm_init();
-  delay(200);
 
-   // control.edf_startup(5);
-  // sensor.fsm_init();
-  control.status = CONTROL_STATUS_EDF_PRIMING;
-  init_timer = millis();
-//  control.set_reference(SETPOINT_Z, 0.55f);
+  control.status = CONTROL_STATUS_IMU_CALIBRATION;
 }
 
-// void loop() {
-
-//   switch (control.status)
-//   {
-//     case CONTROL_STATUS_STATIONARY:
-//       // Wait for user input to run program
-//       user_read_anykey("waiting for user input...");
-//       // Change next state to EDF priming 
-//       control.status = CONTROL_STATUS_EDF_PRIMING;
-//       // Initialize/zero program parameters/timers
-//       start_flag = false;
-//       init_timer = millis();
-//     break;
-    
-//     case CONTROL_STATUS_EDF_PRIMING:
-//       //prime EDF for 5 seconds, and after enter flying mode 
-//       if((millis() - init_timer) <= 5000){ 
-//         control.act.edf.writeMicroseconds(1500);
-//       }else{ 
-//         control.status = CONTROL_STATUS_FLYING;
-//         mst = millis();
-//       }
-//     break;
-
-//     case CONTROL_STATUS_FLYING:
-//       run_hover_program();
-//       step_response_state_machine(2500, 3.00f);
-//     break;
-    
-//     case CONTROL_STATUS_LANDING:
-//     //TODO: Change params for landing
-//     break;
-
-//     case CONTROL_STATUS_IMU_CALIBRATION:
-//     sensor.sample_fsm();
-//         while(!(sensor.data.gyroAccuracy == 3 && sensor.data.linAccuracy == 3 && sensor.data.quatAccuracy == 3 ) )
-//         {
-//             sensor.sample_fsm();
-//             delay(250);
-//             sensor.print_fsm();
-//            // Serial.println("move vehicle to calibrate IMU ");
-//         }
-//     break;
-    
-//     default:
-//       control.status = CONTROL_STATUS_STATIONARY;
-//     break;
-//   }
-
-// }
-
-
 void loop() {
+  
+  // Sample FSM as fast as possible since using SPI (Doesn't like "delay()" function too much)
   sensor.sample_fsm();
 
-  if(control.status == CONTROL_STATUS_STATIONARY)
-  {
+  switch (control.status){
+
+    case CONTROL_STATUS_STATIONARY:
     if(Serial.available() == true){
       start_flag = false;     //this will reset mst once edf priming is done 
       init_timer = millis();  //resets edf priming timer
+      mst = millis();         //mission start timer
       control.status = CONTROL_STATUS_EDF_PRIMING;  //changes state to edf priming on next state
     }
-  }else if(control.status == CONTROL_STATUS_EDF_PRIMING)
-  {
-    control.act.writeEDF((int) 1700);
-    if(millis() - init_timer <= 6000)
-    {
-      control.status = CONTROL_STATUS_EDF_PRIMING;
-    }else{
-      control.status = CONTROL_STATUS_FLYING; 
-    }
-  }else if(control.status == CONTROL_STATUS_FLYING){
-
-    if(start_flag == false)
-    {
-      mst = millis();
-      start_flag = true;
-    }
-    //sample BNO080 as fast as possible allowing for .isAvailable() to catch 
-    //when imu is not ready with new readings. 
-    //sensor.sample_fsm();
+    break;
     
-    //..... Sensor Timer .....//
-    if(millis() - sensor_timer >= DT_MSEC)
-    {
-      sensor_timer = millis();
+    case CONTROL_STATUS_EDF_PRIMING:
+      control.act.edf.writeMicroseconds(EDF_MIN_PWM);
+      if(millis() - init_timer <= 6000){
+        control.status = CONTROL_STATUS_EDF_PRIMING;
+      }else{
+        control.status = CONTROL_STATUS_FLYING; 
+      }
+    break;
+
+    case CONTROL_STATUS_FLYING:
+
+      run_hover_program();
+      step_response_state_machine(2000, 3.00f);
+  
+    break;
     
-      sensor.sample_lidar();
-      //sensor.run_estimator();
+    case CONTROL_STATUS_LANDING:
+    //TODO: Change params for landing
+    break;
 
-      control.lqr(sensor.data.roll, 
-                    sensor.data.pitch, 
-                    sensor.data.yaw, 
-                    sensor.data.gx, 
-                    sensor.data.gy, 
-                    sensor.data.gz, 
-                    sensor.data.ez, 
-                    sensor.estimate.vz);
+    case CONTROL_STATUS_IMU_CALIBRATION:
+      sensor.sample_fsm();
 
-    }
-
-    //..... Estimator Timer .....//   
-    if(millis() - estimator_timer >= DT_MSEC  )
-    {
-      estimator_timer = millis();
-      sensor.run_estimator();
-      //control.actuate();
-      //control.actuate_servos();
-      //control.actuate_edf()
-    }
-
-    //..... Print Timer .....//
-    if(millis() - print_timer >= (DT_MSEC * 5)  ) //DT_MSEC * 4 = 40mS
-    {
-      print_timer = millis();
-      //control.print_debug();
-      //print_control_imu();
-      //print_control_imu_estimater();
-      print_controller();
-      //sensor.print_estimator();
-    // print_estimator_main();
-
-    }
-
-    //step_response_state_machine(2000, 3.00f);
+      if(millis() - print_timer >= (DT_MSEC * 20)  ){       //must use this type of timer for delays 
+        print_timer = millis();
+        sensor.print_fsm();
+      }
+      if(sensor.data.gyroAccuracy == 3 && sensor.data.quatAccuracy == 3 && sensor.data.linAccuracy == 3){
+        //sensor.print_fsm();
+        Serial.println("IMU calibration done..."); 
+        Serial.println("Now in wait mode..."); 
+        control.status = CONTROL_STATUS_STATIONARY;
+      }else{
+        control.status = CONTROL_STATUS_IMU_CALIBRATION;
+      }
+    break;
+    
+    default:
+      control.status = CONTROL_STATUS_STATIONARY;
+    break;
   }
-
-  // }else{
-  //   Serial.println("waiting for priming");
-  //   delay(1000);
-  // }
 
 }
 
+
 void run_hover_program(void){
-    if(start_flag == false)
-    {
-      mst = millis();
-      start_flag = !start_flag;
-    }
-    //sample BNO080 as fast as possible allowing for .isAvailable() to catch 
-    //when imu is not ready with new readings. 
-    sensor.sample_fsm();
-    
-    //..... Sensor Timer .....//
-    if(millis() - sensor_timer >= DT_MSEC)
-    {
-      sensor_timer = millis();
-    
-      //sensor.sample_lidar();
-      //sensor.run_estimator();
-      /*
-      control.lqr(sensor.data.roll, 
-                    sensor.data.pitch, 
-                    sensor.data.yaw, 
-                    sensor.data.gx, 
-                    sensor.data.gy, 
-                    sensor.data.gz, 
-                    sensor.estimate.z, 
-                    sensor.estimate.vz);
-      */
-      ///*
-      control.lqr_int(sensor.data.roll, 
-                    sensor.data.pitch, 
-                    sensor.data.yaw, 
-                    sensor.data.gx, 
-                    sensor.data.gy, 
-                    sensor.data.gz, 
-                    sensor.data.ez, 
-                    sensor.estimate.vz);
-    // */
+      //..... Sensor Timer .....//
+      if(millis() - sensor_timer >= DT_MSEC){
+        sensor_timer = millis();
+      
+        sensor.sample_lidar();
+        //sensor.run_estimator();
 
-      //control.hover(sensor.data, sensor.estimate);
-    }
+        control.lqr(sensor.data.roll, 
+                      sensor.data.pitch, 
+                      sensor.data.yaw, 
+                      sensor.data.gx, 
+                      sensor.data.gy, 
+                      sensor.data.gz, 
+                      sensor.data.ez, 
+                      sensor.estimate.vz);
 
-    //..... Estimator Timer .....//   
-    if(millis() - estimator_timer >= DT_MSEC )
-    {
-      estimator_timer = millis();
-    // sensor.run_estimator();
-      //control.actuate();
-      //control.actuate_servos();
-      //control.actuate_edf()
-    }
+      }
 
-    //..... Print Timer .....//
-    if(millis() - print_timer >= (DT_MSEC * 5)  ) //DT_MSEC * 4 = 40mS
-    {
-      print_timer = millis();
-      //control.print_debug();
-      //print_control_imu();
-      //sensor.print_estimator();
-      print_control_imu_estimater();
-    // print_estimator_main();
+      //..... Estimator Timer .....//   
+      if(millis() - estimator_timer >= DT_MSEC){
+        estimator_timer = millis();
+        sensor.run_estimator();
+        //control.actuate();
+        //control.actuate_servos();
+        //control.actuate_edf()
+      }
 
-    }
-
-    //step_response_state_machine(2500, 3.00f);
+      //..... Print Timer .....//
+      if(millis() - print_timer >= (DT_MSEC * 5)  ){
+        print_timer = millis();
+        //control.print_debug();
+        //print_control_imu();
+        //print_control_imu_estimater();
+        print_controller();
+        //sensor.print_estimator();
+        // print_estimator_main();
+      }
 }
 
 
@@ -279,49 +166,49 @@ void step_response_state_machine(float step_interval_ms, float angle)
   {
     control.set_reference(SETPOINT_PITCH, 0.00f);
     control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.10f);
   }
 
   else if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3))
   {
     control.set_reference(SETPOINT_PITCH, 0.00f);
     control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.30f);
   }
 
   else if(elapsed_time >= ( step_interval_ms * 3 ) && elapsed_time < (step_interval_ms * 4))
   {
     control.set_reference(SETPOINT_PITCH, 0.00f);
     control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.60f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 4) && elapsed_time <= (step_interval_ms * 5))
   {
     control.set_reference(SETPOINT_PITCH, 0.00f);
     control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.60f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 5) && elapsed_time < (step_interval_ms * 6))
   {
     control.set_reference(SETPOINT_PITCH, 0.00f);
     control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_Z , 0.40f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 6) && (elapsed_time < step_interval_ms * 7))
   {
     control.set_reference(SETPOINT_PITCH, 0.00f);
     control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_Z , 0.20f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 7) && (elapsed_time < step_interval_ms * 8))
   {
     control.set_reference(SETPOINT_PITCH, 0.00f);
     control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.10f);
   }
 
   // if(elapsed_time >= (step_interval_ms * 8) && (elapsed_time < step_interval_ms * 9))
@@ -371,7 +258,7 @@ void step_response_state_machine(float step_interval_ms, float angle)
     control.act.edf_shutdown();
     control.act.zero_servos();
     //while(1);
-   // control.status = CONTROL_STATUS_STATIONARY;
+    control.status = CONTROL_STATUS_STATIONARY;
   }
 
 

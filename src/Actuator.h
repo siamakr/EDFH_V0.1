@@ -46,7 +46,7 @@
 //EDF Regression Polynomial Coeffs
 #define EDF_P1 0.2689
 #define EDF_P2 -1.5320
-#define EDF_P3 1596.5
+#define EDF_P3 1597
 
 //VALUES SET FOR +-15º GIMBAL ANGLE FOR BOTH X AND Y
 #define SERVO_X_CENTER_US 1422          //µs
@@ -120,7 +120,7 @@ public:
     Servo sy; 
     Servo edf;
     //Servo rw;
-    volatile actuator_data_t ad;
+    actuator_data_t ad;
 
     Actuator();
 

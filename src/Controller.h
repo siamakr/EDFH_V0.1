@@ -15,8 +15,8 @@
 #define COM_TO_TVC 0.1335                                       //m
 #define ledf .050                                               //m
 #define MASS_EDF .700                                           //Kg
-//#define MASS 2.757                                              //Kg
-#define MASS 2.9                                              //Kg
+#define MASS 2.457                                              //Kg
+//#define MASS 2.9                                              //Kg
 #define MAX_TVC_DEFLECTION_DEG 10.00f                           //deg
 #define MAX_TVC_DEFLECTION_RAD (d2r * MAX_TVC_DEFLECTION_DEG)   //rad
 #define G 9.87                                                  //m/s^2
@@ -126,7 +126,7 @@ private:
 
     volatile float _gain_z{12.90};                   //ALT VELOCITY
     volatile float _gain_vz{8.6942};                  //ALTITUDE
-    volatile float _gain_z_int{0.00f};                  //ALTITUDE INTEGRAL GAIN
+    volatile float _gain_z_int{0.0f};                  //ALTITUDE INTEGRAL GAIN
 
     volatile float _gain_roll_int{2.5};              //ROLL INTEGRAL GAIN
     volatile float _gain_pitch_int{2.5};             //PITCH INTEGRAL GAIN       

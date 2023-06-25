@@ -98,10 +98,15 @@
         //Limit
         LIMIT(delta_xx, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
         LIMIT(delta_yy, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        LIMIT(Tm, 21.00f, 31.00f);
+        LIMIT(Tm, 10.00f, 31.00f);
 
         //Actuate
-        actuate(delta_xx, delta_yy, Tm);
+        //actuate(delta_xx, delta_yy, Tm);
+
+        //Actuate servos/edf motor 
+        act.writeXservo((float) r2d * -delta_xx);
+        act.writeYservo((float) r2d * -delta_yy);
+        act.writeEDF((float) U(3));
 
         //Store data for next iteration 
         cd.delta_xx = delta_xx;
@@ -177,24 +182,6 @@
 
         //Get the magnitude of the thrust vector components 
         float Tm{sqrt(pow(Tx,2) + pow(Ty,2) + pow(Tz,2))};
-        // float delta_xx{asin(Tx/(Tm))};
-        // float delta_yy{asin(Ty/(Tm))};
-
-        // //Feedforward
-        // delta_xx += error(0) * _gain_ff_roll;
-        // delta_yy += error(1) * _gain_ff_pitch;
-        // //Filter
-        // IIR(delta_xx, cd.delta_xx, _alpha_servo);
-        // IIR(delta_yy, cd.delta_yy, _alpha_servo);
-        // //Limit
-        // LIMIT(delta_xx, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        // LIMIT(delta_yy, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        // LIMIT(Tm, 21.00f, 31.00f);
-        // //Actuate
-        // actuate(delta_xx, delta_yy, Tm);
-        // //Store data for next iteration 
-        // cd.delta_xx = delta_xx;
-        // cd.delta_yy = delta_yy;
 
         //Using the  EmboRockETH paper's outline of attaining gimbal angles 
         //from each thrust vector component and magnitude of thrust. 
@@ -204,25 +191,6 @@
         //Feedforward 
         cd.angle_xx -= error(0) * _gain_ff_roll;
         cd.angle_yy -= error(1) * _gain_ff_pitch;
-
-
-
-
-    
-
-
-
-
-        // cd.angle_xx = limit(asin(Tx/(Tm - pow(Ty,2))), -1 * MAX_TVC_DEFLECTION_RAD , MAX_TVC_DEFLECTION_RAD);
-        // cd.angle_yy = limit(asin(Ty/Tm), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
-
-        // cd.angle_xx = asin(Tx/(Tm));
-        // cd.angle_yy = asin(Ty/(Tm - pow(Tx,2)));
-
-        //filter servo angles, the more filtering, the bigger the delay
-        //  cd.angle_x = IIRF(U(0), cd.u(0), 0.08);
-        //  cd.angle_y = IIRF(U(1), cd.u(1), 0.08);
-
 
         //limit servo angles to +-8º
         //filtering and limiting in one line 
@@ -241,8 +209,8 @@
 
         
         //Actuate servos/edf motor 
-        act.writeXservo((float) (r2d * -cd.angle_xx));
-        act.writeYservo((float) (r2d * -cd.angle_yy));
+        act.writeXservo((float)  -cd.angle_xx);
+        act.writeYservo((float)  -cd.angle_yy);
         act.writeEDF((float) cd.Tedf);
 
         //Store debug/filtering data into struct
@@ -284,7 +252,7 @@
     }
 
     void Controller::set_reference( control_setpoint_t cs, float value ){
-        value = value * d2r;
+       // value = value * d2r;
 
         // switch( cs ){
         //     // case SETPOINT_X: SP_pos(0) = value; break;
