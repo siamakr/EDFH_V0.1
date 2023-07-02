@@ -37,16 +37,22 @@
 
 //// EDF Params 
 #define EDF_OFF_PWM 900                 //uSec
-#define EDF_MIN_PWM 1500                //uSec
-#define EDF_MAX_PWM 2000                //uSec
+#define EDF_MIN_PWM 1250                //uSec
+#define EDF_MAX_PWM 1650                //uSec
 #define EDF_MAX_SUSTAINED_PWM 1730      //uSec
-#define EDF_IDLE_PWM 1600               //uSec
+#define EDF_IDLE_PWM 1260               //uSec
 
 //EDF Regression Polynomial Coeffs
 //EDF Regression Polynomial Coeffs
-#define EDF_P1 0.2689
-#define EDF_P2 -1.5320
-#define EDF_P3 1597
+//Linear V2
+// #define EDF_P1 0.00
+// #define EDF_P2 14.69
+// #define EDF_P3 1167
+
+//Quadratic V2
+#define EDF_P1 -0.1409
+#define EDF_P2 20.42
+#define EDF_P3 1117
 
 //VALUES SET FOR +-15º GIMBAL ANGLE FOR BOTH X AND Y
 #define SERVO_X_CENTER_US 1422          //µs

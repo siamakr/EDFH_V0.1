@@ -47,12 +47,16 @@ void setup() {
   control.act.init_edf();
   control.act.zero_servos();
   delay(200);
- // control.init();
+ // control.init();;
   //Sensors init
   sensor.lidar_init();
   sensor.fsm_init();
+  control.set_reference(SETPOINT_Z, 1.000f);
 
   control.status = CONTROL_STATUS_IMU_CALIBRATION;
+  Serial.println("Priming start...");  
+
+  init_timer = millis(); 
 }
 
 void loop() {
@@ -72,10 +76,11 @@ void loop() {
     break;
     
     case CONTROL_STATUS_EDF_PRIMING:
-      control.act.edf.writeMicroseconds(EDF_MIN_PWM);
+      control.act.edf.writeMicroseconds(EDF_IDLE_PWM);
       if(millis() - init_timer <= 6000){
         control.status = CONTROL_STATUS_EDF_PRIMING;
       }else{
+        Serial.println("priming finished..."); 
         control.status = CONTROL_STATUS_FLYING; 
       }
     break;
@@ -83,7 +88,7 @@ void loop() {
     case CONTROL_STATUS_FLYING:
 
       run_hover_program();
-      step_response_state_machine(2000, 3.00f);
+      step_response_state_machine(3000, 3.00f);
   
     break;
     
@@ -92,13 +97,13 @@ void loop() {
     break;
 
     case CONTROL_STATUS_IMU_CALIBRATION:
-      sensor.sample_fsm();
+      //sensor.sample_fsm();
 
       if(millis() - print_timer >= (DT_MSEC * 20)  ){       //must use this type of timer for delays 
         print_timer = millis();
         sensor.print_fsm();
       }
-      if(sensor.data.gyroAccuracy == 3 && sensor.data.quatAccuracy == 3 && sensor.data.linAccuracy == 3){
+      if(sensor.data.gyroAccuracy == 3 && sensor.data.quatAccuracy == 2 && sensor.data.linAccuracy == 3){
         //sensor.print_fsm();
         Serial.println("IMU calibration done..."); 
         Serial.println("Now in wait mode..."); 
@@ -162,54 +167,54 @@ void step_response_state_machine(float step_interval_ms, float angle)
 {
   float elapsed_time{millis() - mst};
 
-  if(elapsed_time >= (step_interval_ms * 1) && elapsed_time < (step_interval_ms * 2) )
-  {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.10f);
-  }
+  // if(elapsed_time >= (step_interval_ms * 1) && elapsed_time < (step_interval_ms * 2) )
+  // {
+  //   control.set_reference(SETPOINT_PITCH, 0.00f);
+  //   control.set_reference(SETPOINT_ROLL , 0.00f);
+  //   control.set_reference(SETPOINT_Z , 0.10f);
+  // }
 
-  else if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3))
-  {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.30f);
-  }
+  // else if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3))
+  // {
+  //   control.set_reference(SETPOINT_PITCH, 0.00f);
+  //   control.set_reference(SETPOINT_ROLL , 0.00f);
+  //   control.set_reference(SETPOINT_Z , 0.30f);
+  // }
 
-  else if(elapsed_time >= ( step_interval_ms * 3 ) && elapsed_time < (step_interval_ms * 4))
-  {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.60f);
-  }
+  // else if(elapsed_time >= ( step_interval_ms * 3 ) && elapsed_time < (step_interval_ms * 4))
+  // {
+  //   control.set_reference(SETPOINT_PITCH, 0.00f);
+  //   control.set_reference(SETPOINT_ROLL , 0.00f);
+  //   control.set_reference(SETPOINT_Z , 0.60f);
+  // }
 
-  else if(elapsed_time >= (step_interval_ms * 4) && elapsed_time <= (step_interval_ms * 5))
-  {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.60f);
-  }
+  // else if(elapsed_time >= (step_interval_ms * 4) && elapsed_time <= (step_interval_ms * 5))
+  // {
+  //   control.set_reference(SETPOINT_PITCH, 0.00f);
+  //   control.set_reference(SETPOINT_ROLL , 0.00f);
+  //   control.set_reference(SETPOINT_Z , 0.60f);
+  // }
 
-  else if(elapsed_time >= (step_interval_ms * 5) && elapsed_time < (step_interval_ms * 6))
-  {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.40f);
-  }
+  // else if(elapsed_time >= (step_interval_ms * 5) && elapsed_time < (step_interval_ms * 6))
+  // {
+  //   control.set_reference(SETPOINT_PITCH, 0.00f);
+  //   control.set_reference(SETPOINT_ROLL , 0.00f);
+  //   control.set_reference(SETPOINT_Z , 0.40f);
+  // }
 
-  else if(elapsed_time >= (step_interval_ms * 6) && (elapsed_time < step_interval_ms * 7))
-  {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.20f);
-  }
+  // else if(elapsed_time >= (step_interval_ms * 6) && (elapsed_time < step_interval_ms * 7))
+  // {
+  //   control.set_reference(SETPOINT_PITCH, 0.00f);
+  //   control.set_reference(SETPOINT_ROLL , 0.00f);
+  //   control.set_reference(SETPOINT_Z , 0.20f);
+  // }
 
-  else if(elapsed_time >= (step_interval_ms * 7) && (elapsed_time < step_interval_ms * 8))
-  {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.10f);
-  }
+  // else if(elapsed_time >= (step_interval_ms * 7) && (elapsed_time < step_interval_ms * 8))
+  // {
+  //   control.set_reference(SETPOINT_PITCH, 0.00f);
+  //   control.set_reference(SETPOINT_ROLL , 0.00f);
+  //   control.set_reference(SETPOINT_Z , 0.10f);
+  // }
 
   // if(elapsed_time >= (step_interval_ms * 8) && (elapsed_time < step_interval_ms * 9))
   // {
@@ -253,7 +258,8 @@ void step_response_state_machine(float step_interval_ms, float angle)
   //   control.set_reference(SETPOINT_ROLL , 0.00f);
   // }
 
-  else if(elapsed_time >= (step_interval_ms * 8))
+  //else 
+  if(elapsed_time >= (step_interval_ms * 8))
   {
     control.act.edf_shutdown();
     control.act.zero_servos();
@@ -349,36 +355,37 @@ void print_controller(void)
 {
   char text[250];
   //              roll  rollsp    pitch  pitchsp    yaw        deltax deltay deltax deltay  u0    u1      u2      u3        estvz estz    dataz   dataez  ax      ay    az        Tedf    pwmedf   
-  sprintf(text, "%0.5f, %0.5f,      %0.5f, %0.5f,       %0.5f,        %0.5f, %0.5f,  %0.5f,  %0.5f,       %0.5f,  %0.5f,  %0.5f,  %0.5f,        %0.5f,  %0.5f,  %0.5f,  %0.5f,  %0.5f,      %0.5f,  %05f,  %0.5f,      %0.5f, %i,       %i, %i, %i ",
-    r2d*sensor.data.roll,
-    r2d*control.SP_hover_int(0),
-    r2d*sensor.data.pitch,
-    r2d*control.SP_hover_int(1),
+  sprintf(text, "%0.5f, %0.5f,      %0.5f, %0.5f,       %0.5f,        %0.5f, %0.5f,  %0.5f,  %0.5f,       %0.5f,  %0.5f,  %0.5f,         %0.5f, %0.5f,     %0.5f, %0.5f,  %0.5f,  %0.5f,      %0.5f,  %05f,  %0.5f,      %0.5f, %i,       %i, %i, %i ",
+    r2d*sensor.data.roll,                 // 1
+    r2d*control.SP_hover_int(0),          // 2
+    r2d*sensor.data.pitch,                // 3
+    r2d*control.SP_hover_int(1),          // 4
 
-    r2d*sensor.data.yaw,
+    r2d*sensor.data.yaw,                  //5
 
-    r2d*control.cd.delta_xx,
-    r2d*control.cd.delta_x,
-    r2d*control.cd.delta_yy,
-    r2d*control.cd.delta_y,
+    r2d*control.cd.delta_xx,              //6
+    r2d*control.cd.delta_x,               //7
+    r2d*control.cd.delta_yy,              //8
+    r2d*control.cd.delta_y,               //9
 
-    r2d*control.cd.u(0),
-    r2d*control.cd.u(1),
-    control.cd.u(2),
-    control.cd.u(3),
+    r2d*control.cd.u(0),                  //10
+    r2d*control.cd.u(1),                  //11
+    control.cd.u(2),                      //12
 
-    sensor.estimate.vz,
-    sensor.estimate.z,
-    sensor.data.z,
-    sensor.data.ez,
-    control.SP_hover_int(6),
+    sensor.estimate.vz,                   //13
+    sensor.estimate.z,                    //14
 
-    sensor.data.ax,
-    sensor.data.ay,
-    sensor.data.az,
+    sensor.data.z,                        //15
+    sensor.data.ez,                       //16
+    control.SP_hover_int(6),              //17
 
-    control.cd.Tedf,
-      control.act.ad.pwmedf,
+    sensor.data.ax,                       //18
+    sensor.data.ay,                       //19
+    sensor.data.az,                       //20
+
+    control.cd.Tedf,                      //21
+    control.cd.u(3),                      //22
+      control.act.ad.pwmedf,              //23
 
     sensor.data.linAccuracy,
     sensor.data.gyroAccuracy,

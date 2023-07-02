@@ -15,7 +15,7 @@
 #define COM_TO_TVC 0.1335                                       //m
 #define ledf .050                                               //m
 #define MASS_EDF .700                                           //Kg
-#define MASS 2.457                                              //Kg
+#define MASS 2.9                                              //Kg
 //#define MASS 2.9                                              //Kg
 #define MAX_TVC_DEFLECTION_DEG 10.00f                           //deg
 #define MAX_TVC_DEFLECTION_RAD (d2r * MAX_TVC_DEFLECTION_DEG)   //rad
@@ -32,7 +32,7 @@
 using namespace BLA;
 
 //..... Defines .....//
-#define DT_MSEC 10.00f
+#define DT_MSEC 5.00f
 #define d2r (PI/180.00f)
 #define r2d (180.00f/PI)
 
@@ -124,12 +124,12 @@ private:
     volatile float _gain_gy{_gain_gx};               //GY GAIN 
     volatile float _gain_gz{.0561};                  //GZ GAIN
 
-    volatile float _gain_z{12.90};                   //ALT VELOCITY
-    volatile float _gain_vz{8.6942};                  //ALTITUDE
-    volatile float _gain_z_int{0.0f};                  //ALTITUDE INTEGRAL GAIN
+    volatile float _gain_z{1.10};                   //ALT VELOCITY
+    volatile float _gain_vz{5.6942};                  //ALTITUDE
+    volatile float _gain_z_int{.50f};                  //ALTITUDE INTEGRAL GAIN
 
-    volatile float _gain_roll_int{2.5};              //ROLL INTEGRAL GAIN
-    volatile float _gain_pitch_int{2.5};             //PITCH INTEGRAL GAIN       
+    volatile float _gain_roll_int{0.5};              //ROLL INTEGRAL GAIN
+    volatile float _gain_pitch_int{0.5};             //PITCH INTEGRAL GAIN       
     volatile float _gain_yaw_int{-.0001};               //YAW INTEGRAL GAIN
 
     volatile float _int_bound_att{d2r * 2.00f};
