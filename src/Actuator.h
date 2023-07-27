@@ -95,6 +95,11 @@
 // #define Y_P2 -26.83
 // #define Y_P3 1596
 
+//-------- Reaction Wheel Regression Consts
+#define RW_P1 5.792
+#define RW_P2 1010
+#define RW_MAX_SPEED_RPS 165.00f 
+#define RW_MAX_SPEED_DPS (RW_MAX_SPEED_DPS * 180.00f/PI)
 
 //  -.00025151   0.96511  -891.54
 //Physical Constraints
@@ -125,7 +130,7 @@ public:
     Servo sx; 
     Servo sy; 
     Servo edf;
-    //Servo rw;
+    Servo rw;
     actuator_data_t ad;
 
     Actuator();
@@ -145,6 +150,10 @@ public:
 
     //Take EDF to 50% and hold for 5 seconds 
     void prime_edf(void);
+
+    void init_rw(void);
+
+    void zero_rw(void);
 
     //Take EDF to 50% and hold for desired time
     void prime_edf(int delay_time_ms);
@@ -176,6 +185,8 @@ public:
     
     //Write to EDF with PWM(µs)
     void writeEDF(int pwm);
+
+        void writeRW(float omega);
 
     //Checks vehicles Roll/Pitch for exceed in max threshold
     void emergency_check(float & r, float & p);

@@ -251,6 +251,35 @@
     // data.status.imu = 0;
     // data.status.pos = 0;
 }
+
+void Sensors::set_origin(){
+    yaw_origin = data.yaw;
+
+   // X.Fill(0);
+}
+
+
+void Sensors::update_pos( float x, float y ){
+
+    data.x = x;
+    data.y = y;
+
+    data.status.pos = 1;
+}
+
+// Rotate yaw to align with origin / home
+float Sensors::rotate_yaw( float yaw ){
+
+    float rotated = yaw - yaw_origin;
+
+    if( rotated > PI )
+        rotated -= TWO_PI;
+    else if( rotated < -PI )
+        rotated += TWO_PI;
+    
+    return rotated;
+
+}
     void Sensors::rotate_to_world( float * vector )
     {
 
@@ -281,18 +310,6 @@
         return ( (1.0f-alpha)*newSample + alpha * prevOutput);
     }
 
-    // Rotate yaw to align with origin / home
-    float Sensors::rotate_yaw( float yaw )
-    {
-
-        float rotated{yaw - yaw_origin};
-
-        if( rotated > PI ) rotated -= TWO_PI;
-        else if( rotated < -PI ) rotated += TWO_PI;
-        
-        return rotated;
-
-    }
 
     void Sensors::print_imu(void)
     {

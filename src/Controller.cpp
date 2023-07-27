@@ -104,15 +104,19 @@
 
         LIMIT(U(0), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
         LIMIT(U(1), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
+        // LIMIT(U(2), 0, 80);            //FROM 10 RAD/S TO 80 RAD/S THIS IS CURRENTLY TORQUE THOUGH
         LIMIT(Tm, 10.00f, 31.00f);
 
         //Actuate
         //actuate(delta_xx, delta_yy, Tm);
 
         //Actuate servos/edf motor 
-        act.writeEDF((float) Tm);
-         act.writeXservo((float) r2d * -U(0));
-         act.writeYservo((float) r2d * -U(1));
+        // act.writeEDF((float) Tm);
+        //  act.writeXservo((float) r2d * -U(0));
+        //  act.writeYservo((float) r2d * -U(1));
+        //  act.writeRW(U(2));
+
+
         // act.writeXservo((float) r2d * -delta_xx);
         // act.writeYservo((float) r2d * -delta_yy);
        // act.writeEDF((float) Tm);

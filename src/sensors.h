@@ -78,8 +78,8 @@ class Sensors
 
 public:
 
-fsm_data_t data;
-estimator_data_t estimate;
+    fsm_data_t data;
+    estimator_data_t estimate;
     BNO080 fsm;
     LIDARLite_v3HP garmin;
     uint16_t distance;
@@ -174,6 +174,10 @@ estimator_data_t estimate;
     void run_estimator(void);
 
     void rotate_to_world( float * vector );
+
+    void set_origin(void);
+    
+    void update_pos( float x, float y );
 
     float rotate_yaw(float yaw);
     

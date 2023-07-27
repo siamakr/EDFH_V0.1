@@ -11,9 +11,11 @@ void Actuator::init(void)
 {
     init_servos();
     init_edf();
+    init_rw();
     delay(100);
     zero_servos();
-
+    zero_rw();
+    edf_shutdown();
 }
     
 void Actuator::init_servos(void)
@@ -27,6 +29,12 @@ void Actuator::init_servos(void)
     delay(10);
     // rw.attach(RW_PIN);
     // delay(200);
+}
+
+void Actuator::init_rw(void)
+{
+    rw.attach(RW_PIN);
+    delay(200);
 }
 
 void Actuator::init_edf(void)
@@ -146,6 +154,13 @@ void Actuator::writeEDF(int pwm)
 {
     ad.pwmedf = pwm; 
     edf.writeMicroseconds(pwm);   
+}
+
+void Actuator::writeRW(float omega){
+    int pwm{round(RW_P1 * omega + RW_P2)};
+    ad.pwmrw = pwm;
+    ad.omega_rw = omega;
+    rw.writeMicroseconds(pwm);
 }
 
 

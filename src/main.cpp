@@ -42,16 +42,21 @@ void user_read_float(float & value, String message);
 void setup() {
 
   Serial.begin(115200);
+  
   // //Servo inits
   control.act.init_servos();
-  control.act.init_edf();
+  //control.act.init_edf();
   control.act.zero_servos();
+  
+  
   delay(200);
  // control.init();;
   //Sensors init
   sensor.lidar_init();
   sensor.fsm_init();
   control.set_reference(SETPOINT_Z, 1.000f);
+  control.set_reference(SETPOINT_YAW, d2r*74.00);
+  
 
   control.status = CONTROL_STATUS_IMU_CALIBRATION;
   Serial.println("Priming start...");  
@@ -103,12 +108,15 @@ void loop() {
         print_timer = millis();
         sensor.print_fsm();
       }
-      if(sensor.data.gyroAccuracy == 3 && sensor.data.quatAccuracy == 2 && sensor.data.linAccuracy == 3){
+      if(sensor.data.gyroAccuracy == 3 && sensor.data.quatAccuracy == 3 && sensor.data.linAccuracy == 3){
         //sensor.print_fsm();
         Serial.println("IMU calibration done..."); 
         Serial.println("Now in wait mode..."); 
         control.status = CONTROL_STATUS_STATIONARY;
       }else{
+        // once calibrated, grab current yaw angle and set it as setpoint 
+        //so the RW holds
+       // control.set_reference(SETPOINT_YAW, sensor.data.yaw);
         control.status = CONTROL_STATUS_IMU_CALIBRATION;
       }
     break;
@@ -150,7 +158,7 @@ void run_hover_program(void){
       }
 
       //..... Print Timer .....//
-      if(millis() - print_timer >= (DT_MSEC * 5)  ){
+      if(millis() - print_timer >= (DT_MSEC * 2)  ){
         print_timer = millis();
         //control.print_debug();
         //print_control_imu();
@@ -355,13 +363,14 @@ void print_controller(void)
 {
   char text[250];
   //              roll  rollsp    pitch  pitchsp    yaw        deltax deltay deltax deltay  u0    u1      u2      u3        estvz estz    dataz   dataez  ax      ay    az        Tedf    pwmedf   
-  sprintf(text, "%0.5f, %0.5f,      %0.5f, %0.5f,       %0.5f,        %0.5f, %0.5f,  %0.5f,  %0.5f,       %0.5f,  %0.5f,  %0.5f,         %0.5f, %0.5f,     %0.5f, %0.5f,  %0.5f,  %0.5f,      %0.5f,  %05f,  %0.5f,      %0.5f, %i,       %i, %i, %i ",
+  sprintf(text, "%0.5f, %0.5f,      %0.5f, %0.5f,       %0.5f, %0.5f,        %0.5f, %0.5f,  %0.5f,  %0.5f,       %0.5f,  %0.5f,  %0.5f,  %0.5f,         %0.5f, %0.5f,     %0.5f, %0.5f,  %0.5f,  %0.5f,    %0.5f, %i,       %i, %i, %i ",
     r2d*sensor.data.roll,                 // 1
     r2d*control.SP_hover_int(0),          // 2
     r2d*sensor.data.pitch,                // 3
     r2d*control.SP_hover_int(1),          // 4
+    r2d*sensor.data.yaw,                // 3
+    r2d*control.SP_hover_int(2),          // 4
 
-    r2d*sensor.data.yaw,                  //5
 
     r2d*control.cd.delta_xx,              //6
     r2d*control.cd.delta_x,               //7
@@ -370,7 +379,8 @@ void print_controller(void)
 
     r2d*control.cd.u(0),                  //10
     r2d*control.cd.u(1),                  //11
-    control.cd.u(2),                      //12
+    (control.cd.u(2)/RW_JZZ),                      //12
+    control.cd.u(3),
 
     sensor.estimate.vz,                   //13
     sensor.estimate.z,                    //14
@@ -379,9 +389,9 @@ void print_controller(void)
     sensor.data.ez,                       //16
     control.SP_hover_int(6),              //17
 
-    sensor.data.ax,                       //18
-    sensor.data.ay,                       //19
-    sensor.data.az,                       //20
+    // sensor.data.ax,                       //18
+    // sensor.data.ay,                       //19
+    // sensor.data.az,                       //20
 
     control.cd.Tedf,                      //21
     control.cd.u(3),                      //22
