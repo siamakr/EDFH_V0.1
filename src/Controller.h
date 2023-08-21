@@ -112,15 +112,15 @@ private:
 
     void IIR(float & new_sample, float prev_output, float alpha);
     //Feedforward gains
-    volatile float _gain_ff_roll{0.085};
-    volatile float _gain_ff_pitch{0.085};
+    volatile float _gain_ff_roll{0.05};
+    volatile float _gain_ff_pitch{0.05};
     //LQR Gains 
     //Use these for gain scheduling //
-    volatile float _gain_roll{0.3700};               //ROLL GAIN
+    volatile float _gain_roll{0.2700};               //ROLL GAIN
     volatile float _gain_pitch{_gain_roll};          //PITCH GAIN
     volatile float _gain_yaw{.0316};                 //YAW GAIN
 
-    volatile float _gain_gx{0.1240};                 //GX GAIN
+    volatile float _gain_gx{0.2040};                 //GX GAIN
     volatile float _gain_gy{_gain_gx};               //GY GAIN 
     volatile float _gain_gz{.0561};                  //GZ GAIN
 

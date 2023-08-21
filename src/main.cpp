@@ -45,7 +45,7 @@ void setup() {
   
   // //Servo inits
   control.act.init_servos();
-  //control.act.init_edf();
+  control.act.init_edf();
   control.act.zero_servos();
   
   
@@ -175,12 +175,12 @@ void step_response_state_machine(float step_interval_ms, float angle)
 {
   float elapsed_time{millis() - mst};
 
-  // if(elapsed_time >= (step_interval_ms * 1) && elapsed_time < (step_interval_ms * 2) )
-  // {
-  //   control.set_reference(SETPOINT_PITCH, 0.00f);
-  //   control.set_reference(SETPOINT_ROLL , 0.00f);
-  //   control.set_reference(SETPOINT_Z , 0.10f);
-  // }
+  if(elapsed_time >= (step_interval_ms * 1) && elapsed_time < (step_interval_ms * 2) )
+  {
+    control.set_reference(SETPOINT_PITCH, 0.00f);
+    control.set_reference(SETPOINT_ROLL , 0.00f);
+    control.set_reference(SETPOINT_Z , 0.560f);
+  }
 
   // else if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3))
   // {
@@ -267,13 +267,13 @@ void step_response_state_machine(float step_interval_ms, float angle)
   // }
 
   //else 
-  // if(elapsed_time >= (step_interval_ms * 8))
-  // {
-  //   control.act.edf_shutdown();
-  //   control.act.zero_servos();
-  //   //while(1);
-  //   control.status = CONTROL_STATUS_STATIONARY;
-  // }
+  if(elapsed_time >= (step_interval_ms * 6))
+  {
+    control.act.edf_shutdown();
+    control.act.zero_servos();
+    //while(1);
+    control.status = CONTROL_STATUS_STATIONARY;
+  }
 
 
 
@@ -303,12 +303,13 @@ void print_control_imu(void)
     sensor.data.ez,
     sensor.estimate.vz,
     sensor.estimate.z,
+
     control.cd.Tedf,
     control.act.ad.pwmedf,
 
-    r2d*sensor.data.ax,
-    r2d*sensor.data.ay,
-    r2d*sensor.data.az,
+    sensor.data.ax,
+    sensor.data.ay,
+    sensor.data.az,
 
     sensor.data.linAccuracy,
     sensor.data.gyroAccuracy,

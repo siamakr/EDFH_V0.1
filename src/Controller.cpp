@@ -88,8 +88,8 @@
         //-----------delete above/debugging only-----------//
 
         //Feedforward
-        // delta_xx -= error(0) * _gain_ff_roll;
-        // delta_yy -= error(1) * _gain_ff_pitch;
+        U(0) -= error(0) * _gain_ff_roll;
+        U(1) -= error(1) * _gain_ff_pitch;
 
         //Filter
         // IIR(delta_xx, cd.delta_xx, _alpha_servo);

@@ -119,8 +119,8 @@
             //fsm.getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
 
             data.linAccuracy = fsm.getLinAccelAccuracy();
-            data.ax = IIR(-fsm.getLinAccelX(), data.ax, _alpha_accel);
-            data.ay = IIR(fsm.getLinAccelY(), data.ay, _alpha_accel);
+            data.ax = IIR(fsm.getLinAccelX(), data.ay, _alpha_accel);
+            data.ay = IIR(fsm.getLinAccelY(), data.ax, _alpha_accel);
             data.az = IIR(-fsm.getLinAccelZ(), data.az, _alpha_accel);
 
             //... Gyro ...//
@@ -146,8 +146,8 @@
 
 
             //... Euler Angle Representation ...//
-            data.pitch = fsm.getRoll() + FSM_ROLL_OFFSET_RAD;
-            data.roll = fsm.getPitch() + FSM_PITCH_OFFSET_RAD;
+            data.pitch = fsm.getRoll() + d2r* 0.6578f;
+            data.roll = fsm.getPitch() + d2r* 1.3772;
             data.yaw = fsm.getYaw() + FSM_YAW_OFFSET_RAD;    
             //data.yaw = 0.00f;
 

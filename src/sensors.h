@@ -19,8 +19,8 @@ using namespace BLA;
 #define d2r (PI/180.00f)
 #define r2d (180.00f/PI)
 
-#define FSM_PITCH_OFFSET_RAD (d2r * 0.858f)
-#define FSM_ROLL_OFFSET_RAD (d2r * 2.13f)
+#define FSM_PITCH_OFFSET_RAD (d2r * 1.3772)
+#define FSM_ROLL_OFFSET_RAD (d2r * 0.6578f)
 #define FSM_YAW_OFFSET_RAD (d2r * 0.00f)
 // #define FSM_ROLL_OFFSET_RAD (d2r * -1.28331)
 // #define FSM_PITCH_OFFSET_RAD (d2r * -2.18253)
@@ -31,6 +31,9 @@ const byte imuCSPin = 10;
 const byte imuWAKPin = 7;
 const byte imuINTPin = 8;
 const byte imuRSTPin = 9;
+
+const float roll_offset{d2r*1.3772};
+const float pitch_offset{d2r*0.6578f};
 
 //..... Lidar Definitions .....//
 //uint8_t garminAddress{0x62};
