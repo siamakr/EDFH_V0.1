@@ -161,9 +161,9 @@ void run_hover_program(void){
       if(millis() - print_timer >= (DT_MSEC * 2)  ){
         print_timer = millis();
         //control.print_debug();
-        //print_control_imu();
+        print_control_imu();
         //print_control_imu_estimater();
-        print_controller();
+        //print_controller();
         //sensor.print_estimator();
         // print_estimator_main();
       }
@@ -267,13 +267,13 @@ void step_response_state_machine(float step_interval_ms, float angle)
   // }
 
   //else 
-  if(elapsed_time >= (step_interval_ms * 8))
-  {
-    control.act.edf_shutdown();
-    control.act.zero_servos();
-    //while(1);
-    control.status = CONTROL_STATUS_STATIONARY;
-  }
+  // if(elapsed_time >= (step_interval_ms * 8))
+  // {
+  //   control.act.edf_shutdown();
+  //   control.act.zero_servos();
+  //   //while(1);
+  //   control.status = CONTROL_STATUS_STATIONARY;
+  // }
 
 
 
@@ -286,31 +286,29 @@ void print_control_imu(void)
 {
   char text[250];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f, %0.5f,\t %0.5f, %0.5f,\t %0.5f,\t %0.5f, %0.5f, %0.5f,\t %0.5f, %0.5f, %0.5f,\t %0.5f, %0.5f,%i,\t %0.5f, %05f, %i,\t %0.5f, %i,\t %i, %i, %i ",
+  sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t    %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, %0.5f,   %0.5f, %i,\t  %0.5f, %0.5f, %0.5f,\t  \t %i, %i, %i ",
     r2d*sensor.data.roll,
-      r2d*control.SP_hover_int(0),
+    r2d*sensor.data.gx,
+    r2d*control.cd.u(0), 
+
     r2d*sensor.data.pitch,
-      r2d*control.SP_hover_int(1),
+    r2d*sensor.data.gy,
+    r2d*control.cd.u(1), 
+
     r2d*sensor.data.yaw,
+    r2d*sensor.data.gz,
+    control.cd.u(2), 
+
+    sensor.data.z,
+    sensor.data.ez,
+    sensor.estimate.vz,
+    sensor.estimate.z,
+    control.cd.Tedf,
+    control.act.ad.pwmedf,
 
     r2d*sensor.data.ax,
     r2d*sensor.data.ay,
     r2d*sensor.data.az,
-
-    sensor.estimate.vz,
-    sensor.estimate.z,
-    sensor.data.z,
-    sensor.data.ez,
-    //r2d*control.cd.angle_x,
-    r2d*control.cd.angle_xx,
-      control.act.ad.pwmx,
-
-    r2d*control.cd.angle_y,
-    r2d*control.cd.angle_yy,
-      control.act.ad.pwmy,
-
-    control.cd.Tedf,
-      control.act.ad.pwmedf,
 
     sensor.data.linAccuracy,
     sensor.data.gyroAccuracy,

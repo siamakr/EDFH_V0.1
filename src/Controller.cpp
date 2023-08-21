@@ -81,10 +81,10 @@
         float delta_yy{asin(Ty/(Tm))};
 
         //-----------delete below//debugging only-----------//
-        cd.delta_x = delta_xx;
-        cd.delta_y = delta_yy;
-        LIMIT(cd.delta_x, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        LIMIT(cd.delta_y, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
+        // cd.delta_x = delta_xx;
+        // cd.delta_y = delta_yy;
+        // LIMIT(cd.delta_x, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
+        // LIMIT(cd.delta_y, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
         //-----------delete above/debugging only-----------//
 
         //Feedforward
@@ -92,15 +92,15 @@
         // delta_yy -= error(1) * _gain_ff_pitch;
 
         //Filter
-        IIR(delta_xx, cd.delta_xx, _alpha_servo);
-        IIR(delta_yy, cd.delta_yy, _alpha_servo);
+        // IIR(delta_xx, cd.delta_xx, _alpha_servo);
+        // IIR(delta_yy, cd.delta_yy, _alpha_servo);
 
         IIR(U(0), cd.u(0), _alpha_servo);
         IIR(U(1), cd.u(1), _alpha_servo);
 
         //Limit
-        LIMIT(delta_xx, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        LIMIT(delta_yy, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
+        // LIMIT(delta_xx, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
+        // LIMIT(delta_yy, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
 
         LIMIT(U(0), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
         LIMIT(U(1), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
@@ -111,10 +111,10 @@
         //actuate(delta_xx, delta_yy, Tm);
 
         //Actuate servos/edf motor 
-        // act.writeEDF((float) Tm);
-        //  act.writeXservo((float) r2d * -U(0));
-        //  act.writeYservo((float) r2d * -U(1));
-        //  act.writeRW(U(2));
+        act.writeEDF((float) Tm);
+         act.writeXservo((float) r2d * -U(0));
+         act.writeYservo((float) r2d * -U(1));
+        // act.writeRW(U(2));
 
 
         // act.writeXservo((float) r2d * -delta_xx);

@@ -63,37 +63,16 @@
 #define SERVO_Y_MAX_US 1900             //µs
 
 ///// MKS Servo TVC Regression Coeffs
-
-////////// Version 4 //////////
-#define X_P1 0.1174
-#define X_P2 33.20
-#define X_P3 1373
-//#define X_P3 1312
+//---- with new short arm + lowest position
+#define X_P1 0.00
+#define X_P2 88.68
+#define X_P3 1468
 
 #define Y_P1 -0.2077
-#define Y_P2 -26.89
-//#define Y_P3 1562
-#define Y_P3 1576
+#define Y_P2 -66.18
+#define Y_P3 1463
 
-////////// Version 5 //////////
-// #define X_P1 0.1174
-// #define X_P2 33.20
-// #define X_P3 1403
-// //34.0182/degree of TVC angle
 
-// #define Y_P1 -0.2077
-// #define Y_P2 -26.89
-// #define Y_P3 1613
-// //28.3092/degree of TVC angle
-
-////////// Version 3 //////////
-// #define X_P1 0.1243
-// #define X_P2 33.11
-// #define X_P3 1428
-
-// #define Y_P1 -0.2112
-// #define Y_P2 -26.83
-// #define Y_P3 1596
 
 //-------- Reaction Wheel Regression Consts
 #define RW_P1 5.792
