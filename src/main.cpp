@@ -267,7 +267,7 @@ void step_response_state_machine(float step_interval_ms, float angle)
   // }
 
   //else 
-  if(elapsed_time >= (step_interval_ms * 6))
+  if(elapsed_time >= (step_interval_ms * 5))
   {
     control.act.edf_shutdown();
     control.act.zero_servos();

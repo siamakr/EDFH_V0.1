@@ -116,11 +116,11 @@ private:
     volatile float _gain_ff_pitch{0.05};
     //LQR Gains 
     //Use these for gain scheduling //
-    volatile float _gain_roll{0.2700};               //ROLL GAIN
+    volatile float _gain_roll{0.2000};               //ROLL GAIN
     volatile float _gain_pitch{_gain_roll};          //PITCH GAIN
     volatile float _gain_yaw{.0316};                 //YAW GAIN
 
-    volatile float _gain_gx{0.2040};                 //GX GAIN
+    volatile float _gain_gx{0.0700};                 //GX GAIN
     volatile float _gain_gy{_gain_gx};               //GY GAIN 
     volatile float _gain_gz{.0561};                  //GZ GAIN
 
@@ -136,7 +136,7 @@ private:
     volatile float _int_bound_alt{0.850f};
     volatile float _max_int_def{d2r*2.00f};
 
-    volatile float _alpha_servo{0.10};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
+    volatile float _alpha_servo{0.20};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
 
 
     Matrix<12,1> _gain_matrix = {   _gain_roll, _gain_pitch, _gain_yaw, 

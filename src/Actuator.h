@@ -65,12 +65,13 @@
 ///// MKS Servo TVC Regression Coeffs
 //---- with new short arm + lowest position
 #define X_P1 0.00
-#define X_P2 88.68
-#define X_P3 1468
+#define X_P2 -37.94
+//#define X_P3 1413
+#define X_P3 1441
 
-#define Y_P1 -0.2077
-#define Y_P2 -66.18
-#define Y_P3 1463
+#define Y_P1 0.00
+#define Y_P2 31.48
+#define Y_P3 1588
 
 
 

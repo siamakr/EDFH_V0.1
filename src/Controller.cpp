@@ -88,8 +88,8 @@
         //-----------delete above/debugging only-----------//
 
         //Feedforward
-        U(0) -= error(0) * _gain_ff_roll;
-        U(1) -= error(1) * _gain_ff_pitch;
+        // U(0) -= error(0) * _gain_ff_roll;
+        // U(1) -= error(1) * _gain_ff_pitch;
 
         //Filter
         // IIR(delta_xx, cd.delta_xx, _alpha_servo);
@@ -112,8 +112,8 @@
 
         //Actuate servos/edf motor 
         act.writeEDF((float) Tm);
-         act.writeXservo((float) r2d * -U(0));
-         act.writeYservo((float) r2d * -U(1));
+         act.writeXservo((float) r2d * U(0));
+         act.writeYservo((float) r2d * U(1));
         // act.writeRW(U(2));
 
 
