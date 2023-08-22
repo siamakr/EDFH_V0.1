@@ -44,9 +44,10 @@ typedef struct
     float roll, pitch, yaw;
     float gx, gy, gz;
     float ax, ay, az;
+    float axw, ayw, azw;
     float qi, qj, qk, qw;
     float x, y, z; //this will be removed when imu_data_t is envoked
-    float evx, evy, evz;
+    float evx, evy, evz, evz_accel;
     float ex, ey, ez;
     byte linAccuracy{0};
     byte gyroAccuracy{0};
@@ -150,7 +151,6 @@ public:
     
         //FILTER PARAMS
     float _alpha_gyro{0.10};                //GYROSCOPE FILTER ALPHA
-    float _alpha_servo{0.07};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
     float _alpha_accel{0.05};               //ACCELEROMETER SIGNAL FILTER ALPHA 
 
 

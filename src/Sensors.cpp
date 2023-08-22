@@ -189,6 +189,7 @@
     // Rotate lidar measurement to world frame
     p[2] = data.z;
     rotate_to_world( p );
+    data.evz = (data.ez - p[2]) / DT_SEC;
     data.ez = p[2];
 
     // Perform gyrocompensation on flow and rotate to world frame.
@@ -200,6 +201,13 @@
     a[0] = data.ax; a[1] = data.ay; a[2] = data.az;
     rotate_to_world( a );
 
+    //integrate az to get vz from accelerometer for testing 
+    data.evz_accel = a[2] * DT_SEC;
+
+    //update the world frame accel values 
+    data.axw = a[0];
+    data.ayw = a[1];
+    data.azw = a[2];
 
     /* ---- Estimation ---- */
     // Fill input vector with acceleration

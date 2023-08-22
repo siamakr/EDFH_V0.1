@@ -54,7 +54,7 @@
         error = Xs - REF;
 
         // //altitude integral action 
-         //error(8)  = ( ( error(6) >= (-1 * _int_bound_alt) ) || ( error(6) <= _int_bound_alt ) ) ? cd.u(8) + ( _gain_z_int     * error(7) * DT_SEC) : 0.00f;       
+         error(8)  += ( ( error(6) >= (-1 * _int_bound_alt) ) && ( error(6) <= _int_bound_alt ) ) ? ( cd.u(6) + (error(6) * DT_SEC ) )* _gain_z_int : 0.00f;       
         // //attitude integral actions
         // error(9)  = ( ( error(1) >= (-1 * _int_bound_att) ) && ( error(1) <= _int_bound_att ) ) ? cd.u(9) + ( _gain_roll_int  * error(1) * DT_SEC) : 0.00f;       
         // error(10) = ( ( error(2) >= (-1 * _int_bound_att) ) && ( error(2) <= _int_bound_att ) ) ? cd.u(10) + ( _gain_pitch_int * error(2) * DT_SEC) : 0.00f;       
@@ -88,12 +88,15 @@
         //-----------delete above/debugging only-----------//
 
         //Feedforward
-        // U(0) -= error(0) * _gain_ff_roll;
-        // U(1) -= error(1) * _gain_ff_pitch;
+        U(0) -= error(0) * _gain_ff_roll;
+        U(1) -= error(1) * _gain_ff_pitch;
 
         //Filter
         // IIR(delta_xx, cd.delta_xx, _alpha_servo);
         // IIR(delta_yy, cd.delta_yy, _alpha_servo);
+
+        //convert desired torque (U(3) to Desired omega for reaction wheel
+  
 
         IIR(U(0), cd.u(0), _alpha_servo);
         IIR(U(1), cd.u(1), _alpha_servo);
@@ -104,17 +107,17 @@
 
         LIMIT(U(0), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
         LIMIT(U(1), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        // LIMIT(U(2), 0, 80);            //FROM 10 RAD/S TO 80 RAD/S THIS IS CURRENTLY TORQUE THOUGH
-        LIMIT(Tm, 10.00f, 31.00f);
+        LIMIT(U(2), 0, 50);            //FROM 10 RAD/S TO 80 RAD/S THIS IS CURRENTLY TORQUE THOUGH
+        LIMIT(U(3), 10.00f, 31.00f);
 
         //Actuate
         //actuate(delta_xx, delta_yy, Tm);
-
+        float rw_speed = U(2) / V_JZZ;
         //Actuate servos/edf motor 
-        act.writeEDF((float) Tm);
+        act.writeEDF((float) U(3));
          act.writeXservo((float) r2d * U(0));
          act.writeYservo((float) r2d * U(1));
-        // act.writeRW(U(2));
+         act.writeRW(rw_speed);
 
 
         // act.writeXservo((float) r2d * -delta_xx);
@@ -129,7 +132,7 @@
         // cd.u(1) = delta_yy;
         cd.u(0) = U(0);
         cd.u(1) = U(1);
-        cd.u(2) = U(2);
+        cd.u(2) = rw_speed;
         cd.u(3) = Tm;
         cd.Tedf = U(3);
 

@@ -54,6 +54,11 @@ void Actuator::zero_servos()
     delay(10);
 }
 
+void Actuator::zero_rw(){
+    rw.writeMicroseconds(900);
+    
+}
+
 
 
 void Actuator::prime_edf(void)
