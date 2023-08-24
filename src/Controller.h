@@ -89,6 +89,8 @@ public:
     
     void lqr_int(float r, float p, float y, float gx, float gy, float gz, float z, float vz);
 
+    void lqr_pos( float x, float y, float vx, float vy, float yaw );
+
     void actuate( float angle_x_rad, float angle_y_rad, float thrust_force_newton );
 
     void actuate_servos(float angle_x_rad, float angle_y_rad);
@@ -137,6 +139,25 @@ private:
     volatile float _max_int_def{d2r*2.00f};
 
     volatile float _alpha_servo{0.150};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
+
+    float error_integral_x{0};
+    float error_integral_y{0};
+
+    // Position state vector
+    Matrix<6,1> X_pos = {0,0,0,0,0,0};
+
+    // Setpoints for position controller (x, y, vx, vy, xint, yint)
+    Matrix<6,1> SP_pos = {0,0,0,0,0,0};
+
+    // Output from position controller
+    Matrix<2,1> U_pos = {0,0};
+
+    /* Matrix<2,6> K_pos = {     0.0000,  -0.1368,   0.0000,  -0.1744,   0.0000,  -0.0250,
+                              0.1368,   0.0000,   0.1744,   0.0000,   0.0250,   0.0000,  }; */
+
+    Matrix<2,6> K_pos = {   0.0000,  -0.1691,   0.0000,  -0.1860,   0.0000,  -0.0500,
+                            0.1691,   0.0000,   0.1860,   0.0000,   0.0500,   0.0000, };
+                            // x      // y      // vx     // vy     // xint   // yint
 
 
     Matrix<12,1> _gain_matrix = {   _gain_roll, _gain_pitch, _gain_yaw, 

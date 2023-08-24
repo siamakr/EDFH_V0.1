@@ -34,6 +34,7 @@ void run_hover_program(void);
 void print_control_imu_estimater(void);
 void print_estimator_main();
 void print_controller(void);
+void flow_debugger(void);
 void user_read_int(int & value, String message);
 void user_read_anykey(String message);
 void user_read_float(float & value, String message);
@@ -166,10 +167,11 @@ void run_hover_program(void){
         print_timer = millis();
         //control.print_debug();
         //print_control_imu();
-        print_control_imu_estimater();
+       //print_control_imu_estimater();
         //print_controller();
         //sensor.print_estimator();
         // print_estimator_main();
+        flow_debugger();
       }
 }
 
@@ -431,6 +433,40 @@ void print_estimator_main(void)
     sensor.data.ax,
     sensor.data.ay,
     sensor.data.az,
+
+    sensor.data.linAccuracy,
+    sensor.data.gyroAccuracy,
+    sensor.data.quatAccuracy);
+
+    Serial.println(text);
+}
+
+void flow_debugger(void)
+{
+    char text[250];
+
+    sprintf(text, "  %0.5f,   %0.5f,  %0.5f, %0.5f, %0.5f,       %0.5f, %0.5f, %0.5f, \t       %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",    
+
+    sensor.data.ax,
+    sensor.debug.vx_raw,
+    sensor.data.vx,
+    sensor.debug.x_int,
+    sensor.debug.xpre_vx,
+ 
+    // sensor.data.ay,
+    // sensor.debug.vy_raw,
+    // sensor.data.vy,
+    // sensor.debug.y_int,
+    // sensor.debug.xpre_vy,
+
+    r2d*sensor.data.roll,
+    r2d*sensor.data.pitch,
+    r2d*sensor.data.yaw,
+    
+    sensor.estimate.vx,
+    sensor.estimate.vy,
+    sensor.estimate.vz,
+
 
     sensor.data.linAccuracy,
     sensor.data.gyroAccuracy,

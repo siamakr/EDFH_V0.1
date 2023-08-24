@@ -249,6 +249,48 @@
         cd.Tz = Tz;
     }
 
+    void Controller::lqr_pos( float x, float y, float vx, float vy, float yaw ){
+
+    Matrix<2,1> output;
+    Matrix<6,1> error;
+
+    // Load state vector
+    X_pos = {x, y, vx, vy, 0, 0};
+
+    // Calculate state error
+    error = SP_pos - X_pos;
+
+    // Rotate error to body (assuming hover state, roll = 0, pitch = 0)
+    // error(0) = error(0)*cos(yaw) + error(1)*sin(yaw);  // x
+    // error(1) = error(1)*cos(yaw) - error(0)*sin(yaw);  // y
+    // error(2) = error(2)*cos(yaw) + error(3)*sin(yaw);  // vx
+    // error(3) = error(3)*cos(yaw) - error(2)*sin(yaw);  // vy
+
+    // Integral computation and limit
+    error_integral_x += error(0) * DT_SEC;
+    error_integral_y += error(1) * DT_SEC;
+
+    LIMIT( error_integral_x, -0.35, 0.35 );
+    LIMIT( error_integral_y, -0.35, 0.35 );
+
+    // Load integral error 
+    error(4) = error_integral_x;
+    error(5) = error_integral_y;
+
+    // Run controller
+    output = K_pos * error;
+
+    // Limit position output to +-10 degress in roll and pitch 
+    LIMIT( output(0), -10 * DEG_TO_RAD, 10 * DEG_TO_RAD );
+    LIMIT( output(1), -10 * DEG_TO_RAD, 10 * DEG_TO_RAD );
+
+    // Use the output of the positional controller as setpoints for the hover controller
+    U_pos = output;
+    
+    // SP_hover(0) = output(0);
+    // SP_hover(1) = output(1);
+}
+
     void Controller::actuate( float angle_x_rad, float angle_y_rad, float thrust_force_newton )
     {
         //angles are switched due to calibration imu axis change, will change this

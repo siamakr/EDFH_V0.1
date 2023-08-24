@@ -30,7 +30,7 @@
         fsm.enableRotationVector(DT_MSEC);  // quat
         //fsm.enableGameRotationVector(DT_MSEC);
         fsm.enableGyro(DT_MSEC);  // rad/s
-        //fsm.enableGyroIntegratedRotationVector(DT_MSEC);
+        fsm.enableGyroIntegratedRotationVector(DT_MSEC);
         //fsm.enableMagnetometer(DT_MSEC);  // cannot be enabled at the same time as RotationVector (will not produce data)
         
         Serial.println("FSM Init Finished..."); 
@@ -123,12 +123,22 @@
             save_calibrate_fsm();
             //..... Sample IMU .....//
             //... Linear Accel ...//
-            //fsm.getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
+            // fsm.getLinAccel(data.ay, data.ax, data.az, data.linAccuracy);
+
+            // debug.ax_nf = data.ax;
+            // debug.ay_nf = data.ay;
+            // debug.az_nf = data.az;
+
 
             data.linAccuracy = fsm.getLinAccelAccuracy();
             data.ay = IIR(fsm.getLinAccelX(), data.ay, _alpha_accel);
-            data.ax = IIR(-fsm.getLinAccelY(), data.ax, _alpha_accel);
+            data.ax = IIR(fsm.getLinAccelY(), data.ax, _alpha_accel);
             data.az = IIR(-fsm.getLinAccelZ(), data.az, _alpha_accel);
+
+            //apply deadzone clamping 
+            clamp(data.ay, -0.2, 0.2);
+            clamp(data.ax, -0.02, 0.02);
+            clamp(data.az, -0.02, 0.02);
 
             //... Gyro ...//
            // fsm.getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
@@ -207,13 +217,33 @@
     // Here dy and dx are flipped, to match orientation of IMU (which is placed to align with the body frame)
     flow.readMotionCount( &dx, &dy );
 
+    //---debugging ---//
+    debug.vx_raw = dx;
+    debug.vy_raw = dy;
+
+
+
+
     // Convert change in pixels to unitless velocity 1/s
-    ofx = ((float)dx / dt ) / PMW3901_FOCAL; // Focal length (in px) found experimentally
+    ofx = ((float) dx / dt ) / PMW3901_FOCAL; // Focal length (in px) found experimentally
     ofy = ((float)dy / dt ) / PMW3901_FOCAL;
 
     // Return the unitless velocity, which can be scaled by height above ground (z)
     data.vx = ofx; // pixels / second
     data.vy = ofy; // pixels / second
+
+    //--- integrating uncompensated velocity for position ---//
+
+    debug.x_int += ofx * dt;
+    debug.y_int += ofx * dt;
+
+    // Serial.print(dx);
+    // Serial.print(",   ");
+    // Serial.print(dy);
+    // Serial.print(",   ");
+    // Serial.print(ofx);
+    // Serial.print(",   ");
+    // Serial.println(ofy);
 
     data.status.flow = 1;
 
@@ -236,6 +266,10 @@
     data.ez = p[2];
 
     // Perform gyrocompensation on flow and rotate to world frame.
+
+    //---debugging ---//
+
+
     v[0] = data.vx * p[2] - data.gy * p[2];
     v[1] = data.vy * p[2] - data.gx * p[2]; 
     rotate_to_world( v );
@@ -282,6 +316,11 @@
     // Matrix <6,1> Xpre_temp = Xpre_t1 + Xpre_t2;
 
     Xpre = (A * Xe) + (B * U_est); 
+
+    //---debugging---//
+    debug.xpre_vx = Xpre(3);
+    debug.xpre_vy = Xpre(4);
+    debug.xpre_vz = Xpre(5);
 
     Xe = Xpre + Kf*(Z - H*Xpre); 
 
@@ -331,12 +370,20 @@ float Sensors::rotate_yaw( float yaw ){
     return rotated;
 
 }
+
+void Sensors::clamp(float &value, float min, float max){
+
+    value = (value <= max && value >= min) ? 0.00f : value;
+}
     void Sensors::rotate_to_world( float * vector )
     {
 
-        float p = data.roll;
-        float q = data.pitch;
-         float u = data.yaw;
+        float p = 0;
+        float q = 0;
+         float u = 0;
+        // float p = data.roll;
+        // float q = data.pitch;
+        //  float u = data.yaw;
         //float u = 0.00f;
         Matrix<3,1> in = { vector[0], vector[1], vector[2] };
         Matrix<3,1> out = {0,0,0};

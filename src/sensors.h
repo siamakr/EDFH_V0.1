@@ -45,6 +45,15 @@ const float pitch_offset{d2r*0.6578f};
 //uint8_t garminAddress{0x62};
 
 //.......... Structure Definitions ..........//
+typedef struct{
+    float ax_nf, ay_nf, az_nf;              //nf = no filter
+    float ax_f, ay_f, az_f;                 //f = filtered
+    float vx_raw, vy_raw;                   //direct output from flow sensor
+    float vx_comp, vy_comp;                 //compensated flow measurements
+    float x_int, y_int;                     //directly integrated flow measurements 
+    float xpre_vx, xpre_vy, xpre_vz;        //the predicted values from estimator (prior to estimation step)
+}debug_t;
+
 typedef struct
 {
     float roll, pitch, yaw;
@@ -96,8 +105,11 @@ public:
     // Bitcraze_PMW3901 flow_bc((int) 29);
     LIDARLite_v3HP garmin;
     uint16_t distance;
+    debug_t debug;
 
     float yaw_origin;
+
+
     
     // Estimator matrixes
     Matrix<6,6> A = {   1,  0,  0,  DT_SEC, 0,  0,
@@ -143,7 +155,7 @@ public:
     //                    -0.0000,    0.0000,   -0.0000,   -0.0000,    0.1057,   -0.0000,
     //                     0.0000,   -0.0000,    1.3001,    0.0000,   -0.0000,    0.0000  }; 
 
-     Matrix<6,6> Kf = {  0.0345,    0.0000,   0.0000,    0.0019,    0.0000,    0.0000,
+     Matrix<6,6> Kf = { 0.0345,    0.0000,   0.0000,    0.0019,    0.0000,    0.0000,
                         0.0000,    0.0345,   0.0000,    0.0000,    0.0019,    0.0000,
                         0.0000,    0.0000,   0.0274,    0.0000,    0.0000,    0.0001,
                         0.1495,    0.0000,   0.0000,    0.0216,    0.0000,    0.0000,
@@ -157,10 +169,10 @@ public:
     //                     0.000000, 0.162570, 0.000000, 0.000000, 0.131210, 0.000000,
     //                     0.000000, 0.000000, 4.190280, 0.000000, 0.000000, 0.045440   };
 
-    
+ 
         //FILTER PARAMS
     float _alpha_gyro{0.10};                //GYROSCOPE FILTER ALPHA
-    float _alpha_accel{0.05};               //ACCELEROMETER SIGNAL FILTER ALPHA 
+    float _alpha_accel{0.20};               //ACCELEROMETER SIGNAL FILTER ALPHA 
 
 
 
@@ -194,6 +206,8 @@ public:
     void update_pos( float x, float y );
 
     float rotate_yaw(float yaw);
+
+    void clamp(float &value, float min, float max);
     
     float IIR(float newSample, float prevOutput, float alpha);
 
