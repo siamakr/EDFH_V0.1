@@ -235,15 +235,15 @@
     //--- integrating uncompensated velocity for position ---//
 
     debug.x_int += ofx * dt;
-    debug.y_int += ofx * dt;
+    debug.y_int += ofy * dt;
 
-    // Serial.print(dx);
-    // Serial.print(",   ");
-    // Serial.print(dy);
-    // Serial.print(",   ");
-    // Serial.print(ofx);
-    // Serial.print(",   ");
-    // Serial.println(ofy);
+    Serial.print(data.vx);
+    Serial.print(",   ");
+    Serial.print(debug.x_int);
+    Serial.print(",   ");
+    Serial.print(data.vy);
+    Serial.print(",   ");
+    Serial.println(debug.y_int);
 
     data.status.flow = 1;
 

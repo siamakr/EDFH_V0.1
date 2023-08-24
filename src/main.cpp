@@ -77,12 +77,12 @@ void loop() {
   switch (control.status){
 
     case CONTROL_STATUS_STATIONARY:
-      if(Serial.available() == true){
+    //  if(Serial.available() == true){
         start_flag = false;     //this will reset mst once edf priming is done 
         init_timer = millis();  //resets edf priming timer
         mst = millis();         //mission start timer
         control.status = CONTROL_STATUS_EDF_PRIMING;  //changes state to edf priming on next state
-      }
+    //  }
     break;
     
     case CONTROL_STATUS_EDF_PRIMING:
@@ -171,7 +171,7 @@ void run_hover_program(void){
         //print_controller();
         //sensor.print_estimator();
         // print_estimator_main();
-        flow_debugger();
+        //flow_debugger();
       }
 }
 
