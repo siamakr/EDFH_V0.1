@@ -24,15 +24,20 @@
 
 #include <SPI.h>
 
-PMW3901::PMW3901(uint8_t cspin)
-  : _cs(cspin)
-{ }
+PMW3901::PMW3901(){ 
+  _cs = 29;   //38 for fworking pin on breadboard
+}
 
 boolean PMW3901::begin(void) {
   // Setup SPI port
-  SPI.begin();
+  //SPI1.setMISO(1);
+  //SPI1.setMOSI(26);
+  SPI1.setCS(_cs);
+  SPI1.setMISO(1);
+  SPI1.setSCK(27);
+  SPI1.begin();
   pinMode(_cs, OUTPUT);
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
+  SPI1.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE3));
 
   // Make sure the SPI bus is reset
   digitalWrite(_cs, HIGH);
@@ -42,7 +47,7 @@ boolean PMW3901::begin(void) {
   digitalWrite(_cs, HIGH);
   delay(1);
 
-  SPI.endTransaction();
+  SPI1.endTransaction();
 
   // Power on reset
   registerWrite(0x3A, 0x5A);
@@ -148,18 +153,18 @@ void PMW3901::readFrameBuffer(char *FBuffer)
 void PMW3901::registerWrite(uint8_t reg, uint8_t value) {
   reg |= 0x80u;
 
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
+  SPI1.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE3));
 
   digitalWrite(_cs, LOW);
 
   delayMicroseconds(50);
-  SPI.transfer(reg);
-  SPI.transfer(value);
+  SPI1.transfer(reg);
+  SPI1.transfer(value);
   delayMicroseconds(50);
 
   digitalWrite(_cs, HIGH);
 
-  SPI.endTransaction();
+  SPI1.endTransaction();
 
   delayMicroseconds(200);
 }
@@ -167,21 +172,21 @@ void PMW3901::registerWrite(uint8_t reg, uint8_t value) {
 uint8_t PMW3901::registerRead(uint8_t reg) {
   reg &= ~0x80u;
 
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
+  SPI1.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE3));
 
   digitalWrite(_cs, LOW);
 
   delayMicroseconds(50);
-  SPI.transfer(reg);
+  SPI1.transfer(reg);
   delayMicroseconds(50);
-  uint8_t value = SPI.transfer(0);
+  uint8_t value = SPI1.transfer(0);
   delayMicroseconds(100);
 
   digitalWrite(_cs, HIGH);
 
   //delayMicroseconds(200);
 
-  SPI.endTransaction();
+  SPI1.endTransaction();
 
   return value;
 }

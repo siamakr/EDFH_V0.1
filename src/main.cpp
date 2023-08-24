@@ -43,19 +43,21 @@ void setup() {
 
   Serial.begin(115200);
   
-  // //Servo inits
-  control.act.init_servos();
-  control.act.init_rw();
-  control.act.init_edf();
-  control.act.zero_servos();
-  control.act.zero_rw();
-  
-  
+  //--- Initialize control Actuators ---//
+  // control.act.init_servos();
+  // control.act.init_rw();
+  // control.act.init_edf();
+  // control.act.zero_servos();
+  // control.act.zero_rw();
   delay(200);
- // control.init();;
-  //Sensors init
+
+  //--- Initialize Sensors ---//
+  sensor.flow_init();
   sensor.lidar_init();
   sensor.fsm_init();
+  //sensor.flow_init();
+
+  //--- Initialize initial coniditions of flight and set state machine start ---//
   control.set_reference(SETPOINT_Z, 1.000f);
   control.set_reference(SETPOINT_YAW, d2r*74.00);
   
@@ -134,9 +136,10 @@ void run_hover_program(void){
       //..... Sensor Timer .....//
       if(millis() - sensor_timer >= DT_MSEC){
         sensor_timer = millis();    //update timer
-      
+
         sensor.sample_lidar();      //read lidar 
-        //sensor.run_estimator();
+
+        sensor.run_estimator();
 
         control.lqr(sensor.data.roll, 
                       sensor.data.pitch, 
@@ -150,9 +153,9 @@ void run_hover_program(void){
       }
 
       //..... Estimator Timer .....//   
-      if(millis() - estimator_timer >= DT_MSEC){
+      if(millis() - estimator_timer >= DT_MSEC*4){
         estimator_timer = millis();
-        sensor.run_estimator();
+        sensor.sample_flow();       //read flow
         //control.actuate();
         //control.actuate_servos();
         //control.actuate_edf()
@@ -162,8 +165,8 @@ void run_hover_program(void){
       if(millis() - print_timer >= (DT_MSEC * 2)  ){
         print_timer = millis();
         //control.print_debug();
-        print_control_imu();
-        //print_control_imu_estimater();
+        //print_control_imu();
+        print_control_imu_estimater();
         //print_controller();
         //sensor.print_estimator();
         // print_estimator_main();
@@ -268,14 +271,14 @@ void step_response_state_machine(float step_interval_ms, float angle)
   // }
 
   //else 
-  if(elapsed_time >= (step_interval_ms * 6))
-  {
-    control.act.edf_shutdown();
-    control.act.zero_servos();
-    control.act.zero_rw();
-    //while(1);
-    control.status = CONTROL_STATUS_STATIONARY;
-  }
+  // if(elapsed_time >= (step_interval_ms * 6))
+  // {
+  //   control.act.edf_shutdown();
+  //   control.act.zero_servos();
+  //   control.act.zero_rw();
+  //   //while(1);
+  //   control.status = CONTROL_STATUS_STATIONARY;
+  // }
 
 
 

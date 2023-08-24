@@ -24,12 +24,13 @@
 #define __BITCRAZE_PMW3901_H__
 
 #include "Arduino.h"
+#include "RHGenericSPI.h"
 
 #include <stdint.h>
 
 class PMW3901 {
 public:
-  PMW3901(uint8_t cspin);
+  PMW3901();
 
   boolean begin(void);
 

@@ -19,7 +19,7 @@
         Serial.print("FSM Init start..."); 
         //delay(300);
 
-        if (fsm.beginSPI(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin, 3000000) == false)
+        if (fsm.beginSPI(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin, 4000000) == false)
         {
             Serial.println("BNO080 over SPI not detected. Are you sure you have all 6 connections? Freezing...");
             while(1);
@@ -57,8 +57,15 @@
         delay(200);
     }
 
-    void Sensors::flow_init(void)
-    {
+    void Sensors::flow_init(void){
+    // Initiate flow sensor
+    if ( flow.begin() ) {
+        flow.setLed(false);
+        Serial.println("Flow connected successfully"); 
+    }else{
+        Serial.println("Flow failed to connected, check connections");
+        while(1); 
+    }
 
     }
 
@@ -119,8 +126,8 @@
             //fsm.getLinAccel(data.ax, data.ay, data.az, data.linAccuracy);
 
             data.linAccuracy = fsm.getLinAccelAccuracy();
-            data.ax = IIR(fsm.getLinAccelX(), data.ay, _alpha_accel);
-            data.ay = IIR(fsm.getLinAccelY(), data.ax, _alpha_accel);
+            data.ay = IIR(fsm.getLinAccelX(), data.ay, _alpha_accel);
+            data.ax = IIR(-fsm.getLinAccelY(), data.ax, _alpha_accel);
             data.az = IIR(-fsm.getLinAccelZ(), data.az, _alpha_accel);
 
             //... Gyro ...//
@@ -178,6 +185,42 @@
        // data.z = (float)distance/100.00f;
     }
 
+    void Sensors::sample_flow(){
+        //sample the raw velocity (Must be altitude/attitude corrected)
+        // uint16_t vx, vy;
+        // flow.readMotionCount( &vx, &vy );
+
+        // data.vx = (float) vx;
+        // data.vy = (float) vy;
+
+        // data.status.flow = 1;
+
+    static uint32_t last_sample;
+    int16_t dx, dy;
+    float ofx, ofy;
+
+    float dt = (micros() - last_sample);
+    dt = dt/1000000;
+    
+    last_sample = micros();
+    
+    // Here dy and dx are flipped, to match orientation of IMU (which is placed to align with the body frame)
+    flow.readMotionCount( &dx, &dy );
+
+    // Convert change in pixels to unitless velocity 1/s
+    ofx = ((float)dx / dt ) / PMW3901_FOCAL; // Focal length (in px) found experimentally
+    ofy = ((float)dy / dt ) / PMW3901_FOCAL;
+
+    // Return the unitless velocity, which can be scaled by height above ground (z)
+    data.vx = ofx; // pixels / second
+    data.vy = ofy; // pixels / second
+
+    data.status.flow = 1;
+
+
+    }
+
+
     void Sensors::run_estimator(void){
 
 
@@ -193,9 +236,9 @@
     data.ez = p[2];
 
     // Perform gyrocompensation on flow and rotate to world frame.
-    // v[0] = data.vx * p[2] + data.gy * p[2];
-    // v[1] = data.vy * p[2] - data.gx * p[2]; 
-    // rotate_to_world( v );
+    v[0] = data.vx * p[2] - data.gy * p[2];
+    v[1] = data.vy * p[2] - data.gx * p[2]; 
+    rotate_to_world( v );
 
     // Rotate acceleration to world frame
     a[0] = data.ax; a[1] = data.ay; a[2] = data.az;
@@ -223,16 +266,16 @@
         // Z(1) = data.y;
     //}
 
-  //  if( data.status.lidar == 1){
+    if( data.status.lidar == 1){
         H(2,2) = 1.0f;
         Z(2,1) = p[2]; // p[2]: z
-   // }
+    }
 
-    // if( data.status.flow == 1){
-    //     H(3,3) = 1; H(4,4) = 1;
-    //     Z(3) = v[0]; // vx
-    //     Z(4) = v[1]; // vy
-    // }
+    if( data.status.flow == 1){
+        H(3,3) = 1; H(4,4) = 1;
+        Z(3) = v[0]; // vx
+        Z(4) = v[1]; // vy
+    }
 
     // Matrix <6,1> Xpre_t1 = A * Xe;
     // Matrix <6,1> Xpre_t2 = B * U_est;
@@ -254,7 +297,7 @@
     estimate.vz = Xe(5);
 
     // Reset status (measurements has been used!)
-    // data.status.flow = 0;
+     data.status.flow = 0;
      data.status.lidar = 0;
     // data.status.imu = 0;
     // data.status.pos = 0;
@@ -293,8 +336,8 @@ float Sensors::rotate_yaw( float yaw ){
 
         float p = data.roll;
         float q = data.pitch;
-        // float u = data.yaw;
-        float u = 0.00f;
+         float u = data.yaw;
+        //float u = 0.00f;
         Matrix<3,1> in = { vector[0], vector[1], vector[2] };
         Matrix<3,1> out = {0,0,0};
 

@@ -7,11 +7,17 @@
 #include <SPI.h>
 #include "BNO080.h"
 #include "LIDARLite_v3HP.h"
+#include "PMW3901.h"
+//#include "Bitcraze_PMW3901.h"
 #include <Math.h>
 #include <BasicLinearAlgebra.h>
 #include <stdint.h>
 
 using namespace BLA;
+
+#define PMW3901_FOV 42.0f           // Degress
+#define PMW3901_FOCAL 412.27f       // Focal length in pixels (found experimentally using pin-hole model)
+#define PMW3901_WIDTH 30            // Pixels
 
 //..... Defines .....//
 #define DT_MSEC 5.00f
@@ -44,6 +50,7 @@ typedef struct
     float roll, pitch, yaw;
     float gx, gy, gz;
     float ax, ay, az;
+    float vx, vy;           //these are raw flow velocity data before kalman filter
     float axw, ayw, azw;
     float qi, qj, qk, qw;
     float x, y, z; //this will be removed when imu_data_t is envoked
@@ -81,10 +88,12 @@ class Sensors
 
 
 public:
-
+    uint8_t cspin = 29;
     fsm_data_t data;
     estimator_data_t estimate;
     BNO080 fsm;
+    PMW3901 flow;
+    // Bitcraze_PMW3901 flow_bc((int) 29);
     LIDARLite_v3HP garmin;
     uint16_t distance;
 
@@ -127,19 +136,19 @@ public:
     Matrix<3,1> U_est = {0.00f,0.00f,0.00f};
 
     // Estimator gain
-     Matrix<6,6> Kf = {  0.0001,    0.0000,    0.0000,    0.0095,   -0.0000,    0.0000,
-                        0.0000,    0.0001,   -0.0000,    0.0000,    0.0095,   -0.0000,
-                        0.0000,   -0.0000,    0.1547,    0.0000,   -0.0000,    0.0000,
-                        0.0000,    0.0000,    0.0000,    0.1057,   -0.0000,    0.0000,
-                       -0.0000,    0.0000,   -0.0000,   -0.0000,    0.1057,   -0.0000,
-                        0.0000,   -0.0000,    1.3001,    0.0000,   -0.0000,    0.0000  }; 
+    //  Matrix<6,6> Kf = {  0.0001,    0.0000,    0.0000,    0.0095,   -0.0000,    0.0000,
+    //                     0.0000,    0.0001,   -0.0000,    0.0000,    0.0095,   -0.0000,
+    //                     0.0000,   -0.0000,    0.1547,    0.0000,   -0.0000,    0.0000,
+    //                     0.0000,    0.0000,    0.0000,    0.1057,   -0.0000,    0.0000,
+    //                    -0.0000,    0.0000,   -0.0000,   -0.0000,    0.1057,   -0.0000,
+    //                     0.0000,   -0.0000,    1.3001,    0.0000,   -0.0000,    0.0000  }; 
 
-    //  Matrix<6,6> Kf = {  0.0345,    0.0000,   0.0000,    0.0019,    0.0000,    0.0000,
-    //                     0.0000,    0.0345,   0.0000,    0.0000,    0.0019,    0.0000,
-    //                     0.0000,    0.0000,   0.0274,    0.0000,    0.0000,    0.0001,
-    //                     0.1495,    0.0000,   0.0000,    0.0216,    0.0000,    0.0000,
-    //                     0.0000,    0.1495,   0.0000,    0.0000,    0.0216,    0.0000,
-    //                     0.0000,    0.0000,   0.0767,    0.0000,    0.0000,    0.0004    }; 
+     Matrix<6,6> Kf = {  0.0345,    0.0000,   0.0000,    0.0019,    0.0000,    0.0000,
+                        0.0000,    0.0345,   0.0000,    0.0000,    0.0019,    0.0000,
+                        0.0000,    0.0000,   0.0274,    0.0000,    0.0000,    0.0001,
+                        0.1495,    0.0000,   0.0000,    0.0216,    0.0000,    0.0000,
+                        0.0000,    0.1495,   0.0000,    0.0000,    0.0216,    0.0000,
+                        0.0000,    0.0000,   0.0767,    0.0000,    0.0000,    0.0004    }; 
 
     // Matrix<6,6> Kf = {  0.618520, 0.000000, 0.000000, 0.000330, 0.000000, 0.000000,
     //                     0.000000, 0.618520, 0.000000, 0.000000, 0.000330, 0.000000,
@@ -173,6 +182,8 @@ public:
     void sample_fsm(void);
 
     void sample_lidar(void);
+
+    void sample_flow(void);
 
     void run_estimator(void);
 
