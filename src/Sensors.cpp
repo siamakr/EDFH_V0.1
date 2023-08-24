@@ -136,7 +136,7 @@
             data.az = IIR(-fsm.getLinAccelZ(), data.az, _alpha_accel);
 
             //apply deadzone clamping 
-            clamp(data.ay, -0.2, 0.2);
+            clamp(data.ay, -0.02, 0.02);
             clamp(data.ax, -0.02, 0.02);
             clamp(data.az, -0.02, 0.02);
 
@@ -237,13 +237,13 @@
     debug.x_int += ofx * dt;
     debug.y_int += ofy * dt;
 
-    Serial.print(data.vx);
-    Serial.print(",   ");
-    Serial.print(debug.x_int);
-    Serial.print(",   ");
-    Serial.print(data.vy);
-    Serial.print(",   ");
-    Serial.println(debug.y_int);
+    // Serial.print(data.vx);
+    // Serial.print(",   ");
+    // Serial.print(debug.x_int);
+    // Serial.print(",   ");
+    // Serial.print(data.vy);
+    // Serial.print(",   ");
+    // Serial.println(debug.y_int);
 
     data.status.flow = 1;
 
@@ -378,13 +378,13 @@ void Sensors::clamp(float &value, float min, float max){
     void Sensors::rotate_to_world( float * vector )
     {
 
-        float p = 0;
-        float q = 0;
-         float u = 0;
-        // float p = data.roll;
-        // float q = data.pitch;
-        //  float u = data.yaw;
-        //float u = 0.00f;
+        // float p = 0;
+        // float q = 0;
+        //  float u = 0;
+        float p = data.roll;
+        float q = data.pitch;
+        //float u = data.yaw;
+        float u = 0.00f;
         Matrix<3,1> in = { vector[0], vector[1], vector[2] };
         Matrix<3,1> out = {0,0,0};
 

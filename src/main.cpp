@@ -45,23 +45,25 @@ void setup() {
   Serial.begin(115200);
   
   //--- Initialize control Actuators ---//
-  // control.act.init_servos();
-  // control.act.init_rw();
-  // control.act.init_edf();
-  // control.act.zero_servos();
-  // control.act.zero_rw();
-  delay(200);
+   control.act.init_servos();
+    // control.act.init_rw();
+   control.act.init_edf();
+   control.act.zero_servos();
+    // control.act.zero_rw();
+    delay(200);
+  //--- Initialize Control Actuators ---//
 
   //--- Initialize Sensors ---//
-  sensor.flow_init();
-  sensor.lidar_init();
-  sensor.fsm_init();
-  //sensor.flow_init();
+    sensor.flow_init();
+    sensor.lidar_init();
+    sensor.fsm_init();
+    //sensor.flow_init();
+  //--- Initialize Sensors ---//
 
   //--- Initialize initial coniditions of flight and set state machine start ---//
-  control.set_reference(SETPOINT_Z, 1.000f);
-  control.set_reference(SETPOINT_YAW, d2r*74.00);
-  
+    control.set_reference(SETPOINT_Z, 1.000f);
+    control.set_reference(SETPOINT_YAW, d2r*74.00);
+  //--- Initialize initial coniditions of flight and set state machine start ---//
 
   control.status = CONTROL_STATUS_IMU_CALIBRATION;
   Serial.println("Priming start...");  
@@ -77,12 +79,12 @@ void loop() {
   switch (control.status){
 
     case CONTROL_STATUS_STATIONARY:
-    //  if(Serial.available() == true){
+      if(Serial.available() == true){
         start_flag = false;     //this will reset mst once edf priming is done 
         init_timer = millis();  //resets edf priming timer
         mst = millis();         //mission start timer
         control.status = CONTROL_STATUS_EDF_PRIMING;  //changes state to edf priming on next state
-    //  }
+      }
     break;
     
     case CONTROL_STATUS_EDF_PRIMING:
@@ -136,12 +138,25 @@ void loop() {
 void run_hover_program(void){
       //..... Sensor Timer .....//
       if(millis() - sensor_timer >= DT_MSEC){
+        //update timer
         sensor_timer = millis();    //update timer
-
+        //sample lidar
         sensor.sample_lidar();      //read lidar 
-
+        //execute estimator
         sensor.run_estimator();
 
+        //run position controller to get roll_desired, pitch_desired vals
+        control.lqr_pos(sensor.data.vx, 
+                        sensor.data.vy, 
+                        sensor.debug.x_int, 
+                        sensor.debug.y_int, 
+                        0.00f);
+
+        //take output of pos controller and set as reference for attitude controller
+        control.set_reference(SETPOINT_ROLL, control.U_pos(0));
+        control.set_reference(SETPOINT_PITCH, control.U_pos(1));
+
+        //runn attitude controller + control allocator
         control.lqr(sensor.data.roll, 
                       sensor.data.pitch, 
                       sensor.data.yaw, 
@@ -154,7 +169,7 @@ void run_hover_program(void){
       }
 
       //..... Estimator Timer .....//   
-      if(millis() - estimator_timer >= DT_MSEC*4){
+      if(millis() - estimator_timer >= DT_MSEC*2){
         estimator_timer = millis();
         sensor.sample_flow();       //read flow
         //control.actuate();
@@ -166,12 +181,27 @@ void run_hover_program(void){
       if(millis() - print_timer >= (DT_MSEC * 2)  ){
         print_timer = millis();
         //control.print_debug();
-        //print_control_imu();
-       //print_control_imu_estimater();
+       // print_control_imu();
+       print_control_imu_estimater();
         //print_controller();
         //sensor.print_estimator();
         // print_estimator_main();
         //flow_debugger();
+
+        //---- debugger ----//
+        // Serial.print(r2d*sensor.data.roll);
+        // Serial.print(",   ");
+        // Serial.print(r2d*control.U_pos(0));
+        // Serial.print(",   ");
+        // Serial.print(sensor.debug.x_int);
+        // Serial.print(",   ");
+        // Serial.print(r2d*sensor.data.pitch);
+        // Serial.print(",   ");
+        // Serial.print(r2d*control.U_pos(1));
+        // Serial.print(",   ");
+        // Serial.print(sensor.debug.y_int);
+        // Serial.println(",   ");
+
       }
 }
 
@@ -183,37 +213,40 @@ void step_response_state_machine(float step_interval_ms, float angle)
 
   if(elapsed_time >= (step_interval_ms * 1) && elapsed_time < (step_interval_ms * 2) )
   {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
+    // control.set_reference(SETPOINT_PITCH, 0.00f);
+    // control.set_reference(SETPOINT_ROLL , 0.00f);
     control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_X , 0.00f);
+    control.set_reference(SETPOINT_Y , 0.00f);
+    
   }
 
   else if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3))
   {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
     control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_X , 0.00f);
+    control.set_reference(SETPOINT_Y , 0.00f);
   }
 
   else if(elapsed_time >= ( step_interval_ms * 3 ) && elapsed_time < (step_interval_ms * 4))
   {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
     control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_X , 0.00f);
+    control.set_reference(SETPOINT_Y , 0.00f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 4) && elapsed_time <= (step_interval_ms * 5))
   {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_Z , 0.40f);
+    control.set_reference(SETPOINT_X , 0.00f);
+    control.set_reference(SETPOINT_Y , 0.00f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 5) && elapsed_time < (step_interval_ms * 6))
   {
-    control.set_reference(SETPOINT_PITCH, 0.00f);
-    control.set_reference(SETPOINT_ROLL , 0.00f);
     control.set_reference(SETPOINT_Z , 0.10f);
+    control.set_reference(SETPOINT_X , 0.00f);
+    control.set_reference(SETPOINT_Y , 0.00f);
   }
 
   // else if(elapsed_time >= (step_interval_ms * 6) && (elapsed_time < step_interval_ms * 7))
@@ -293,36 +326,44 @@ void print_control_imu(void)
 {
   char text[250];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t    %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, %0.5f,   %0.5f, %i,\t  %0.5f, %0.5f, %0.5f,\t  \t %i, %i, %i ",
+  sprintf(text, "%0.5f, %0.5f,  %0.5f, %0.5f,\t %0.5f, %0.5f,  %0.5f, %0.5f,\t %0.5f, %0.5f,  %0.5f, %0.5f,\t   \t %i, %i, %i ",
     r2d*sensor.data.roll,
+    r2d*control.SP_pos(0),
     r2d*sensor.data.gx,
     r2d*control.cd.u(0), 
+    
 
     r2d*sensor.data.pitch,
+    r2d*control.SP_pos(1),
     r2d*sensor.data.gy,
     r2d*control.cd.u(1), 
 
     r2d*sensor.data.yaw,
+    r2d*control.SP_pos(2),
     r2d*sensor.data.gz,
     control.cd.u(2), 
 
-    sensor.data.z,
-    sensor.data.ez,
-    sensor.data.evz,
-    sensor.estimate.vz,
+    // sensor.debug.x_int,
+    // sensor.data.vx,
+    // sensor.data.ax,
+    
+    // sensor.debug.y_int,
+    // sensor.data.vy,
+    // sensor.data.ay,
 
-    control.cd.Tedf,
-    control.act.ad.pwmedf,
+    // sensor.data.ez,
+    // sensor.data.evz_accel,
+    // sensor.data.az,
+    // control.SP_hover_int(6),
 
-    sensor.data.ax,
-    sensor.data.ay,
-    sensor.data.az,
+    // control.cd.Tedf,
+    // control.act.ad.pwmedf,
 
     sensor.data.linAccuracy,
     sensor.data.gyroAccuracy,
     sensor.data.quatAccuracy);
 
-  Serial.println(text);
+  Serial.print(text);
 
 }
 
@@ -330,38 +371,23 @@ void print_control_imu_estimater(void)
 {
   char text[280];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f,  \t %0.5f, %0.5f, %0.5f,   \t  %0.5f,     %0.5f, %0.5f,     %0.5f, %0.5f,  \t %0.5f, %05f, %0.5f,\t %0.5f, %i,\t %i, %i, %i ",
-    r2d*sensor.data.roll,
-    r2d*sensor.data.pitch,
-    r2d*sensor.data.yaw,
-
-    sensor.estimate.x,
-    sensor.estimate.y,
-    sensor.estimate.z,
-
-    sensor.estimate.vx,
-    sensor.estimate.vy,
-    sensor.estimate.vz,
-    //sensor.data.z,
-
-    control.cd.e_int(8),
-
-    sensor.data.evz,
-    sensor.data.evz_accel,
-    sensor.data.z,
-    sensor.data.ez,
-
-
+  sprintf(text, "%0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f,  \t %0.5f, %0.5f, %0.5f, %0.5f, \t  %0.5f, %i,  \t  ",
+    
+    sensor.debug.x_int,
+    sensor.data.vx,
     sensor.data.ax,
+    
+    sensor.debug.y_int,
+    sensor.data.vy,
     sensor.data.ay,
+
+    sensor.data.ez,
+    sensor.data.evz_accel,
     sensor.data.az,
+    control.SP_hover_int(6),
 
-    control.cd.u(3),
-      control.act.ad.pwmedf,
-
-    sensor.data.linAccuracy,
-    sensor.data.gyroAccuracy,
-    sensor.data.quatAccuracy);
+    control.cd.Tedf,
+    control.act.ad.pwmedf);
 
   Serial.println(text);
 
@@ -445,7 +471,7 @@ void flow_debugger(void)
 {
     char text[250];
 
-    sprintf(text, "  %0.5f,   %0.5f,  %0.5f, %0.5f, %0.5f,       %0.5f, %0.5f, %0.5f, \t       %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",    
+    sprintf(text, "  %0.5f, %0.5f,  %0.5f, %0.5f, %0.5f,\t       %0.5f, %0.5f, %0.5f, \t       %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",    
 
     sensor.data.ax,
     sensor.debug.vx_raw,

@@ -286,6 +286,8 @@
 
     // Use the output of the positional controller as setpoints for the hover controller
     U_pos = output;
+
+
     
     // SP_hover(0) = output(0);
     // SP_hover(1) = output(1);
@@ -296,15 +298,15 @@
         //angles are switched due to calibration imu axis change, will change this
         //in the polynomial regression definition of the servo angles to tvc angle
         
-        act.writeXservo((float)  -angle_x_rad);
-        act.writeYservo((float)  -angle_y_rad);
+        act.writeXservo((float)  angle_x_rad);
+        act.writeYservo((float)  angle_y_rad);
         act.writeEDF((float) thrust_force_newton);
     }
 
     void Controller::actuate_servos(float angle_x_rad, float angle_y_rad)
     {
-        act.writeXservo((float)  -angle_x_rad);
-        act.writeYservo((float)  -angle_y_rad);
+        act.writeXservo((float)  angle_x_rad);
+        act.writeYservo((float)  angle_y_rad);
     }
 
     void Controller::actuate_edf(float thrust_force_newton)
@@ -325,9 +327,9 @@
         // }
 
         switch( cs ){
-            // case SETPOINT_X: SP_pos(0) = value; break;
-            // case SETPOINT_Y: SP_pos(1) = value; break;
-             case SETPOINT_Z: SP_hover_int(6) = value; break;
+            case SETPOINT_X: SP_pos(0) = value; break;
+            case SETPOINT_Y: SP_pos(1) = value; break;
+            case SETPOINT_Z: SP_hover_int(6) = value; break;
             case SETPOINT_ROLL: SP_hover_int(0) = value; break;
             case SETPOINT_PITCH: SP_hover_int(1) = value; break;
             case SETPOINT_YAW: SP_hover_int(2) = value; break;

@@ -101,7 +101,14 @@ public:
 
     void print_debug(void);
 
+    // Position state vector
+    Matrix<6,1> X_pos = {0,0,0,0,0,0};
 
+    // Setpoints for position controller (x, y, vx, vy, xint, yint)
+    Matrix<6,1> SP_pos = {0,0,0,0,0,0};
+
+    // Output from position controller
+    Matrix<2,1> U_pos = {0,0};
 
 
 private:
@@ -118,7 +125,7 @@ private:
     volatile float _gain_ff_pitch{0.000};
     //LQR Gains 
     //Use these for gain scheduling //
-    volatile float _gain_roll{0.25500};               //ROLL GAIN
+    volatile float _gain_roll{0.26500};               //ROLL GAIN
     volatile float _gain_pitch{_gain_roll};          //PITCH GAIN
     volatile float _gain_yaw{.116};                 //YAW GAIN
 
@@ -126,9 +133,9 @@ private:
     volatile float _gain_gy{_gain_gx};               //GY GAIN 
     volatile float _gain_gz{.361};                  //GZ GAIN
 
-    volatile float _gain_z{12.10};                   //ALT VELOCITY
-    volatile float _gain_vz{45.6942};                  //ALTITUDE
-    volatile float _gain_z_int{12.00f};                  //ALTITUDE INTEGRAL GAIN
+    volatile float _gain_z{15.10};                   //ALT VELOCITY
+    volatile float _gain_vz{49.6942};                  //ALTITUDE
+    volatile float _gain_z_int{8.00f};                  //ALTITUDE INTEGRAL GAIN
 
     volatile float _gain_roll_int{0.5};              //ROLL INTEGRAL GAIN
     volatile float _gain_pitch_int{0.5};             //PITCH INTEGRAL GAIN       
@@ -143,14 +150,7 @@ private:
     float error_integral_x{0};
     float error_integral_y{0};
 
-    // Position state vector
-    Matrix<6,1> X_pos = {0,0,0,0,0,0};
 
-    // Setpoints for position controller (x, y, vx, vy, xint, yint)
-    Matrix<6,1> SP_pos = {0,0,0,0,0,0};
-
-    // Output from position controller
-    Matrix<2,1> U_pos = {0,0};
 
     /* Matrix<2,6> K_pos = {     0.0000,  -0.1368,   0.0000,  -0.1744,   0.0000,  -0.0250,
                               0.1368,   0.0000,   0.1744,   0.0000,   0.0250,   0.0000,  }; */
