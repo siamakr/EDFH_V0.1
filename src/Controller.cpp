@@ -12,11 +12,10 @@
     {
         //attach actuator pins
         act.init_servos();
+        act.init_rw();
         act.init_edf();
-        delay(100);
-        //center TVC 
         act.zero_servos();
-        delay(100);
+        act.zero_rw();
         
         
     }
@@ -54,13 +53,13 @@
         error = Xs - REF;
 
         // //altitude integral action 
-         error(8)  += ( ( error(6) >= (-1 * _int_bound_alt) ) && ( error(6) <= _int_bound_alt ) ) ? ( cd.u(6) + (error(6) * DT_SEC ) )* _gain_z_int : 0.00f;       
+         error(8)  = ( ( error(6) >= (-1 * _int_bound_alt) ) && ( error(6) <= _int_bound_alt ) ) ? (cd.e_int(8) +  (error(6) * DT_SEC ) ) : 0.00f;       
         // //attitude integral actions
         // error(9)  = ( ( error(1) >= (-1 * _int_bound_att) ) && ( error(1) <= _int_bound_att ) ) ? cd.u(9) + ( _gain_roll_int  * error(1) * DT_SEC) : 0.00f;       
         // error(10) = ( ( error(2) >= (-1 * _int_bound_att) ) && ( error(2) <= _int_bound_att ) ) ? cd.u(10) + ( _gain_pitch_int * error(2) * DT_SEC) : 0.00f;       
         // error(11) = ( ( error(3) >= (-1 * _int_bound_att) ) && ( error(3) <= _int_bound_att ) ) ? cd.u(11) + ( _gain_yaw_int   * error(3) * DT_SEC) : 0.00f;  
 
-        // LIMIT(error(9) , -1 * _max_int_def, _max_int_def);
+         LIMIT(error(8) , -1 * _int_bound_alt, _int_bound_alt);
         // LIMIT(error(10), -1 * _max_int_def, _max_int_def);
         // LIMIT(error(11), -1 * _max_int_def, _max_int_def);
 
@@ -79,7 +78,7 @@
         float Tm{sqrt(pow(Tx,2) + pow(Ty,2) + pow(Tz,2))};
         float delta_xx{asin(Tx/(Tm))};
         float delta_yy{asin(Ty/(Tm))};
-
+       // U(3) = Tm;
         //-----------delete below//debugging only-----------//
         // cd.delta_x = delta_xx;
         // cd.delta_y = delta_yy;
@@ -88,8 +87,8 @@
         //-----------delete above/debugging only-----------//
 
         //Feedforward
-        U(0) -= error(0) * _gain_ff_roll;
-        U(1) -= error(1) * _gain_ff_pitch;
+        U(0) += error(0) * _gain_ff_roll;
+        U(1) += error(1) * _gain_ff_pitch;
 
         //Filter
         // IIR(delta_xx, cd.delta_xx, _alpha_servo);
@@ -107,7 +106,7 @@
 
         LIMIT(U(0), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
         LIMIT(U(1), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        LIMIT(U(2), 0, 50);            //FROM 10 RAD/S TO 80 RAD/S THIS IS CURRENTLY TORQUE THOUGH
+        LIMIT(U(2), 0, 60);            //FROM 10 RAD/S TO 80 RAD/S THIS IS CURRENTLY TORQUE THOUGH
         LIMIT(U(3), 10.00f, 31.00f);
 
         //Actuate

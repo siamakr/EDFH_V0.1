@@ -15,7 +15,7 @@
 #define COM_TO_TVC 0.1335                                       //m
 #define ledf .050                                               //m
 #define MASS_EDF .700                                           //Kg
-#define MASS 2.150                                              //Kg
+#define MASS 2.17                                              //Kg
 //#define MASS 2.9                                              //Kg
 #define MAX_TVC_DEFLECTION_DEG 5.00f                           //deg
 #define MAX_TVC_DEFLECTION_RAD (d2r * MAX_TVC_DEFLECTION_DEG)   //rad
@@ -121,31 +121,31 @@ private:
 
     void IIR(float & new_sample, float prev_output, float alpha);
     //Feedforward gains
-    volatile float _gain_ff_roll{0.00};
-    volatile float _gain_ff_pitch{0.000};
+    volatile float _gain_ff_roll{-0.00005};
+    volatile float _gain_ff_pitch{-0.00005};
     //LQR Gains 
     //Use these for gain scheduling //
-    volatile float _gain_roll{0.26500};               //ROLL GAIN
+    volatile float _gain_roll{0.300};               //ROLL GAIN
     volatile float _gain_pitch{_gain_roll};          //PITCH GAIN
     volatile float _gain_yaw{.116};                 //YAW GAIN
 
-    volatile float _gain_gx{0.08500};                 //GX GAIN
+    volatile float _gain_gx{0.1100};                 //GX GAIN
     volatile float _gain_gy{_gain_gx};               //GY GAIN 
     volatile float _gain_gz{.361};                  //GZ GAIN
 
-    volatile float _gain_z{15.10};                   //ALT VELOCITY
-    volatile float _gain_vz{49.6942};                  //ALTITUDE
-    volatile float _gain_z_int{8.00f};                  //ALTITUDE INTEGRAL GAIN
+    volatile float _gain_z{10.10};                   //ALT VELOCITY
+    volatile float _gain_vz{23.6942};                  //ALTITUDE
+    volatile float _gain_z_int{0.00f};                  //ALTITUDE INTEGRAL GAIN
 
     volatile float _gain_roll_int{0.5};              //ROLL INTEGRAL GAIN
     volatile float _gain_pitch_int{0.5};             //PITCH INTEGRAL GAIN       
     volatile float _gain_yaw_int{-.0001};               //YAW INTEGRAL GAIN
 
     volatile float _int_bound_att{d2r * 2.00f};
-    volatile float _int_bound_alt{0.850f};
+    volatile float _int_bound_alt{0.050f};
     volatile float _max_int_def{d2r*2.00f};
 
-    volatile float _alpha_servo{0.150};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
+    volatile float _alpha_servo{0.080};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
 
     float error_integral_x{0};
     float error_integral_y{0};
@@ -155,8 +155,8 @@ private:
     /* Matrix<2,6> K_pos = {     0.0000,  -0.1368,   0.0000,  -0.1744,   0.0000,  -0.0250,
                               0.1368,   0.0000,   0.1744,   0.0000,   0.0250,   0.0000,  }; */
 
-    Matrix<2,6> K_pos = {   0.0000,  -0.1691,   0.0000,  -0.1860,   0.0000,  -0.0500,
-                            0.1691,   0.0000,   0.1860,   0.0000,   0.0500,   0.0000, };
+    Matrix<2,6> K_pos = {   0.0000,  0.1531,   0.0000,  0.1700,   0.0000,  0.0500,
+                            -0.1531,   0.0000,   -0.1700,   0.0000,   0.0500,   0.0000, };
                             // x      // y      // vx     // vy     // xint   // yint
 
 

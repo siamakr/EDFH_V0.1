@@ -50,8 +50,9 @@ typedef struct{
     float ax_f, ay_f, az_f;                 //f = filtered
     float vx_raw, vy_raw;                   //direct output from flow sensor
     float vx_comp, vy_comp;                 //compensated flow measurements
+    float x_comp, y_comp;
     float x_int, y_int;                     //directly integrated flow measurements 
-    float xpre_vx, xpre_vy, xpre_vz;        //the predicted values from estimator (prior to estimation step)
+    float xpre_vx, xpre_vy, xpre_vz, xpre_z;        //the predicted values from estimator (prior to estimation step)
 }debug_t;
 
 typedef struct
@@ -63,7 +64,7 @@ typedef struct
     float axw, ayw, azw;
     float qi, qj, qk, qw;
     float x, y, z; //this will be removed when imu_data_t is envoked
-    float evx, evy, evz, evz_accel;
+    float evx, evy, evz, evz_accel, evz_accel_prev;
     float ex, ey, ez;
     byte linAccuracy{0};
     byte gyroAccuracy{0};
@@ -155,12 +156,21 @@ public:
     //                    -0.0000,    0.0000,   -0.0000,   -0.0000,    0.1057,   -0.0000,
     //                     0.0000,   -0.0000,    1.3001,    0.0000,   -0.0000,    0.0000  }; 
 
-     Matrix<6,6> Kf = { 0.0345,    0.0000,   0.0000,    0.0019,    0.0000,    0.0000,
-                        0.0000,    0.0345,   0.0000,    0.0000,    0.0019,    0.0000,
-                        0.0000,    0.0000,   0.0274,    0.0000,    0.0000,    0.0001,
-                        0.1495,    0.0000,   0.0000,    0.0216,    0.0000,    0.0000,
-                        0.0000,    0.1495,   0.0000,    0.0000,    0.0216,    0.0000,
-                        0.0000,    0.0000,   0.0767,    0.0000,    0.0000,    0.0004    }; 
+    //  Matrix<6,6> Kf = { 0.0345,    0.0000,   0.0000,    0.0019,    0.0000,    0.0000,
+    //                     0.0000,    0.0345,   0.0000,    0.0000,    0.0019,    0.0000,
+    //                     0.0000,    0.0000,   0.0274,    0.0000,    0.0000,    0.0001,
+    //                     0.1495,    0.0000,   0.0000,    0.0216,    0.0000,    0.0000,
+    //                     0.0000,    0.1495,   0.0000,    0.0000,    0.0216,    0.0000,
+    //                     0.0000,    0.0000,   0.0767,    0.0000,    0.0000,    0.0004    }; 
+
+     Matrix<6,6> Kf = {        0.5000,         0,         0,    0.0008,         0,         0,
+                                    0,    0.5000,         0,         0,    0.0008,         0,
+                                    0,         0,    0.0768,         0,         0,    0.085,
+                               0.0008,         0,         0,    0.5000,         0,         0,
+                                    0,    0.0008,         0,         0,    0.5000,         0,
+                                    0,         0,    1.0000,         0,         0,    0.0000};
+
+
 
     // Matrix<6,6> Kf = {  0.618520, 0.000000, 0.000000, 0.000330, 0.000000, 0.000000,
     //                     0.000000, 0.618520, 0.000000, 0.000000, 0.000330, 0.000000,
@@ -172,7 +182,7 @@ public:
  
         //FILTER PARAMS
     float _alpha_gyro{0.10};                //GYROSCOPE FILTER ALPHA
-    float _alpha_accel{0.20};               //ACCELEROMETER SIGNAL FILTER ALPHA 
+    float _alpha_accel{0.08};               //ACCELEROMETER SIGNAL FILTER ALPHA 
 
 
 

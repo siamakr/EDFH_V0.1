@@ -60,7 +60,7 @@
     void Sensors::flow_init(void){
     // Initiate flow sensor
     if ( flow.begin() ) {
-        flow.setLed(false);
+        flow.setLed(true);
         Serial.println("Flow connected successfully"); 
     }else{
         Serial.println("Flow failed to connected, check connections");
@@ -133,12 +133,12 @@
             data.linAccuracy = fsm.getLinAccelAccuracy();
             data.ay = IIR(fsm.getLinAccelX(), data.ay, _alpha_accel);
             data.ax = IIR(fsm.getLinAccelY(), data.ax, _alpha_accel);
-            data.az = IIR(-fsm.getLinAccelZ(), data.az, _alpha_accel);
+            data.az = IIR(fsm.getLinAccelZ(), data.az, _alpha_accel);
 
             //apply deadzone clamping 
-            clamp(data.ay, -0.02, 0.02);
-            clamp(data.ax, -0.02, 0.02);
-            clamp(data.az, -0.02, 0.02);
+            // clamp(data.ay, -0.01, 0.01);
+            // clamp(data.ax, -0.01, 0.01);
+            // clamp(data.az, -0.02, 0.02);
 
             //... Gyro ...//
            // fsm.getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
@@ -186,7 +186,7 @@
             garmin.takeRange();
 
             // Read new distance data from device registers
-            data.z = (float)(garmin.readDistance()/100.00f);
+            data.z = (float)(garmin.readDistance()/100.00f) - 0.08f;
 
             // Report to calling function that we have new data
             data.status.lidar = 1;
@@ -262,8 +262,9 @@
     // Rotate lidar measurement to world frame
     p[2] = data.z;
     rotate_to_world( p );
-    data.evz = (data.ez - p[2]) / DT_SEC;
+    float vz_lidar = (p[2] - data.ez) / DT_SEC;
     data.ez = p[2];
+    data.evz = vz_lidar;
 
     // Perform gyrocompensation on flow and rotate to world frame.
 
@@ -274,12 +275,17 @@
     v[1] = data.vy * p[2] - data.gx * p[2]; 
     rotate_to_world( v );
 
+    debug.x_comp += v[0] * DT_SEC;
+    debug.y_comp += v[1] * DT_SEC;
+
     // Rotate acceleration to world frame
     a[0] = data.ax; a[1] = data.ay; a[2] = data.az;
     rotate_to_world( a );
 
     //integrate az to get vz from accelerometer for testing 
-    data.evz_accel = a[2] * DT_SEC;
+    data.evz_accel += a[2] * DT_SEC;
+    data.evz_accel = IIR(data.evz_accel, data.evz_accel_prev, 0.05);
+    data.evz_accel_prev = data.evz_accel;
 
     //update the world frame accel values 
     data.axw = a[0];
@@ -302,7 +308,7 @@
 
     if( data.status.lidar == 1){
         H(2,2) = 1.0f;
-        Z(2,1) = p[2]; // p[2]: z
+        Z(2) = p[2]; // p[2]: z
     }
 
     if( data.status.flow == 1){
@@ -321,6 +327,7 @@
     debug.xpre_vx = Xpre(3);
     debug.xpre_vy = Xpre(4);
     debug.xpre_vz = Xpre(5);
+    debug.xpre_z = Xpre(2);
 
     Xe = Xpre + Kf*(Z - H*Xpre); 
 

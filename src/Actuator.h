@@ -67,7 +67,7 @@
 #define X_P1 0.00
 #define X_P2 -37.94
 //#define X_P3 1413
-#define X_P3 1448
+#define X_P3 1390
 
 #define Y_P1 0.00
 #define Y_P2 31.48
