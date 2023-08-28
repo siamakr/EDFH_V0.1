@@ -106,17 +106,19 @@
 
         LIMIT(U(0), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
         LIMIT(U(1), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        LIMIT(U(2), 0, 60);            //FROM 10 RAD/S TO 80 RAD/S THIS IS CURRENTLY TORQUE THOUGH
+        LIMIT(U(2), 0, 0.21);            //FROM 10 RAD/S TO 80 RAD/S THIS IS CURRENTLY TORQUE THOUGH
         LIMIT(U(3), 10.00f, 31.00f);
 
         //Actuate
         //actuate(delta_xx, delta_yy, Tm);
-        float rw_speed = U(2) / V_JZZ;
+        //convert desired torque into force (N)
+        float desired_yaw_force = ((U(2) / lrw) / 2) ;                    //dividing by 2 to split force between 2 roll props
+        float desired_yaw_grams{(desired_yaw_force/9.8) * 1000};
         //Actuate servos/edf motor 
         act.writeEDF((float) U(3));
-         act.writeXservo((float) r2d * U(0));
-         act.writeYservo((float) r2d * U(1));
-         act.writeRW(rw_speed);
+        act.writeXservo((float) r2d * U(0));
+        act.writeYservo((float) r2d * U(1));
+        act.writeRW(desired_yaw_grams);
 
 
         // act.writeXservo((float) r2d * -delta_xx);
@@ -131,7 +133,7 @@
         // cd.u(1) = delta_yy;
         cd.u(0) = U(0);
         cd.u(1) = U(1);
-        cd.u(2) = rw_speed;
+        cd.u(2) = desired_yaw_force * 2;
         cd.u(3) = Tm;
         cd.Tedf = U(3);
 

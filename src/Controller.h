@@ -14,6 +14,7 @@
 //// Vehicle Specs + General Constants
 #define COM_TO_TVC 0.1335                                       //m
 #define ledf .050                                               //m
+#define lrw 0.150                                               //m
 #define MASS_EDF .700                                           //Kg
 #define MASS 2.17                                              //Kg
 //#define MASS 2.9                                              //Kg
@@ -125,16 +126,16 @@ private:
     volatile float _gain_ff_pitch{-0.00005};
     //LQR Gains 
     //Use these for gain scheduling //
-    volatile float _gain_roll{0.300};               //ROLL GAIN
+    volatile float _gain_roll{0.250};               //ROLL GAIN
     volatile float _gain_pitch{_gain_roll};          //PITCH GAIN
-    volatile float _gain_yaw{.116};                 //YAW GAIN
+    volatile float _gain_yaw{.0916};                 //YAW GAIN
 
-    volatile float _gain_gx{0.1100};                 //GX GAIN
+    volatile float _gain_gx{0.10500};                 //GX GAIN
     volatile float _gain_gy{_gain_gx};               //GY GAIN 
-    volatile float _gain_gz{.361};                  //GZ GAIN
+    volatile float _gain_gz{.0391};                  //GZ GAIN
 
     volatile float _gain_z{10.10};                   //ALT VELOCITY
-    volatile float _gain_vz{23.6942};                  //ALTITUDE
+    volatile float _gain_vz{33.6942};                  //ALTITUDE
     volatile float _gain_z_int{0.00f};                  //ALTITUDE INTEGRAL GAIN
 
     volatile float _gain_roll_int{0.5};              //ROLL INTEGRAL GAIN
@@ -155,8 +156,8 @@ private:
     /* Matrix<2,6> K_pos = {     0.0000,  -0.1368,   0.0000,  -0.1744,   0.0000,  -0.0250,
                               0.1368,   0.0000,   0.1744,   0.0000,   0.0250,   0.0000,  }; */
 
-    Matrix<2,6> K_pos = {   0.0000,  0.1531,   0.0000,  0.1700,   0.0000,  0.0500,
-                            -0.1531,   0.0000,   -0.1700,   0.0000,   0.0500,   0.0000, };
+    Matrix<2,6> K_pos = {   0.0000,  0.1031,   0.0000,  0.1400,   0.0000,  0.0500,
+                            -0.1031,   0.0000,   -0.1400,   0.0000,   0.0500,   0.0000, };
                             // x      // y      // vx     // vy     // xint   // yint
 
 

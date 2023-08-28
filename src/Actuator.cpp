@@ -161,10 +161,12 @@ void Actuator::writeEDF(int pwm)
     edf.writeMicroseconds(pwm);   
 }
 
-void Actuator::writeRW(float omega){
-    int pwm{round(RW_P1 * omega + RW_P2)};
+void Actuator::writeRW(float grams){
+    //int pwm{round(RW_P1 * omega + RW_P2)};
+    int pwm{ round( (RW_P1_GRAMS * pow(grams,2)) + RW_P2_GRAMS * grams + RW_P3_GRAMS )};
+    LIMIT(pwm, 900, 2000);
     ad.pwmrw = pwm;
-    ad.omega_rw = omega;
+    ad.omega_rw = grams;
     rw.writeMicroseconds(pwm);
 }
 
@@ -230,4 +232,11 @@ bool Actuator::step_response_y_servo(int angle_deg)
     Serial.println(elapsed_time);
 
     return true;
+
+
 }
+
+    void Actuator::LIMIT(int & value, int min, int max )
+    {
+        value = ( (value <= min) ? min : (value >= max ? max : value) );
+    }

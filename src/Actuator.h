@@ -74,11 +74,12 @@
 //#define Y_P3 1588
 #define Y_P3 1575
 
-
+//[-0.013683 6.2274 1133.2]
 
 //-------- Reaction Wheel Regression Consts
-#define RW_P1 5.792
-#define RW_P2 1010
+#define RW_P1_GRAMS -0.013683
+#define RW_P2_GRAMS 6.2274
+#define RW_P3_GRAMS 1033
 #define RW_MAX_SPEED_RPS 165.00f 
 #define RW_MAX_SPEED_DPS (RW_MAX_SPEED_DPS * 180.00f/PI)
 
@@ -167,7 +168,7 @@ public:
     //Write to EDF with PWM(µs)
     void writeEDF(int pwm);
 
-        void writeRW(float omega);
+        void writeRW(float grams);
 
     //Checks vehicles Roll/Pitch for exceed in max threshold
     void emergency_check(float & r, float & p);
@@ -180,6 +181,8 @@ public:
     bool step_response_x_servo(int angle_deg);
 
     bool step_response_y_servo(int angle_deg);
+
+    void LIMIT(int & value, int min, int max);
 
 private:
 

@@ -47,7 +47,7 @@ void setup() {
   //--- Initialize control Actuators ---//
     control.init();
   //  control.act.init_servos();
-  //  control.act.init_rw();
+   // control.act.init_rw();
   //  control.act.init_edf();
   //  control.act.zero_servos();
   //  control.act.zero_rw();
@@ -61,7 +61,7 @@ void setup() {
   //--- Initialize Sensors ---//
 
   //--- Initialize initial coniditions of flight and set state machine start ---//
-    control.set_reference(SETPOINT_Z, 1.000f);
+    control.set_reference(SETPOINT_Z, 0.600f);
     control.set_reference(SETPOINT_YAW, d2r*74.00);
   //--- Initialize initial coniditions of flight and set state machine start ---//
 
@@ -181,7 +181,7 @@ void run_hover_program(void){
       if(millis() - print_timer >= (DT_MSEC * 2)  ){
         print_timer = millis();
         //control.print_debug();
-        //print_control_imu();
+        print_control_imu();
         print_control_imu_estimater();
         //print_controller();
         //sensor.print_estimator();
@@ -215,7 +215,7 @@ void step_response_state_machine(float step_interval_ms, float angle)
   {
     // control.set_reference(SETPOINT_PITCH, 0.00f);
     // control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_Z , 0.30f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
     
@@ -223,21 +223,21 @@ void step_response_state_machine(float step_interval_ms, float angle)
 
   else if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3))
   {
-    control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_Z , 0.30f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
   else if(elapsed_time >= ( step_interval_ms * 3 ) && elapsed_time < (step_interval_ms * 4))
   {
-    control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_Z , 0.30f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 4) && elapsed_time <= (step_interval_ms * 5))
   {
-    control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_Z , 0.30f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
@@ -326,7 +326,7 @@ void print_control_imu(void)
 {
   char text[250];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f, %0.5f, %0.5f,  \t  %0.5f, %0.5f, %0.5f,     \t ",
+  sprintf(text, "%0.5f, %0.5f, %0.5f,  \t  %0.5f, %0.5f, %0.5f,     \t  %0.5f, %0.5f, %0.5f,    ",
     r2d*sensor.data.roll,
     r2d*control.SP_hover_int(0),
     r2d*control.cd.u(0), 
@@ -334,11 +334,11 @@ void print_control_imu(void)
 
     r2d*sensor.data.pitch,
     r2d*control.SP_hover_int(1),
-    r2d*control.cd.u(1) 
+    r2d*control.cd.u(1), 
 
-    // r2d*sensor.data.yaw,
-    // r2d*control.SP_pos(2),
-    // control.cd.u(2) 
+    r2d*sensor.data.yaw,
+    r2d*control.SP_pos(2),
+    control.cd.u(2) 
 
     // sensor.debug.x_int,
     // sensor.data.vx,
@@ -405,13 +405,17 @@ void print_controller(void)
 {
   char text[250];
   //              roll  rollsp    pitch  pitchsp    yaw        deltax deltay deltax deltay  u0    u1      u2      u3        estvz estz    dataz   dataez  ax      ay    az        Tedf    pwmedf   
-  sprintf(text, "%0.5f, %0.5f,      %0.5f, %0.5f,       %0.5f, %0.5f,        %0.5f, %0.5f,  %0.5f,  %0.5f,       %0.5f,  %0.5f,  %0.5f,  %0.5f,         %0.5f, %0.5f,     %0.5f, %0.5f,  %0.5f,  %0.5f,    %0.5f, %i,       %i, %i, %i ",
-    r2d*sensor.data.roll,                 // 1
-    r2d*control.SP_hover_int(0),          // 2
-    r2d*sensor.data.pitch,                // 3
-    r2d*control.SP_hover_int(1),          // 4
+  sprintf(text, "%0.5f, %0.5f,%i,       %0.5f,  %0.5f,  %0.5f,       %0.5f,  %0.5f,  %0.5f,  %0.5f,         %0.5f, %0.5f,     %0.5f, %0.5f,  %0.5f,  %0.5f,    %0.5f, %i,       %i, %i, %i ",
+    // r2d*sensor.data.roll,                 // 1
+    // r2d*control.SP_hover_int(0),          // 2
+    // r2d*sensor.data.pitch,                // 3
+    // r2d*control.SP_hover_int(1),          // 4
+    // r2d*sensor.data.yaw,                // 3
+    // r2d*control.SP_hover_int(2),          // 4
+
     r2d*sensor.data.yaw,                // 3
-    r2d*control.SP_hover_int(2),          // 4
+    control.cd.u(2),
+    control.act.ad.pwmrw,
 
 
     r2d*control.cd.delta_xx,              //6
