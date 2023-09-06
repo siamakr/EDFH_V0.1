@@ -6,6 +6,7 @@
 
 
 #define STATEMACHINE
+//#define SENSOR_ONLY 
 //#define QUICKTESTENV
 
 //Envoking Class objects 
@@ -26,6 +27,7 @@ volatile float init_timer{0.00f};
 volatile bool is_calibrated{false};  
 volatile bool start_flag{false};
 volatile bool prime_start_flag{false};
+int count = 0;
 
 
 void print_control_imu(void);
@@ -44,16 +46,18 @@ void setup() {
 
   Serial.begin(115200);
   
+  #ifndef SENSOR_ONLY
   //--- Initialize control Actuators ---//
-    control.init();
-  //  control.act.init_servos();
-   // control.act.init_rw();
-  //  control.act.init_edf();
-  //  control.act.zero_servos();
-  //  control.act.zero_rw();
-    delay(200);
-  //--- Initialize Control Actuators ---//
+  //control.init();
+   control.act.init_servos();
+   control.act.init_rw();
+   control.act.init_edf();
+   control.act.zero_servos();
+   control.act.zero_rw();
+  #endif
+  //control.act.init_servos();
 
+    delay(200);
   //--- Initialize Sensors ---//
     sensor.flow_init();
     sensor.lidar_init();
@@ -61,14 +65,14 @@ void setup() {
   //--- Initialize Sensors ---//
 
   //--- Initialize initial coniditions of flight and set state machine start ---//
-    control.set_reference(SETPOINT_Z, 0.600f);
-    control.set_reference(SETPOINT_YAW, d2r*74.00);
+    control.set_reference(SETPOINT_Z, 0.400f);
+    control.set_reference(SETPOINT_YAW, d2r*10.00);
   //--- Initialize initial coniditions of flight and set state machine start ---//
 
   control.status = CONTROL_STATUS_IMU_CALIBRATION;
   Serial.println("Priming start...");  
 
-  init_timer = millis(); 
+  //init_timer = millis(); 
 }
 
 void loop() {
@@ -76,20 +80,31 @@ void loop() {
   // Sample FSM as fast as possible since using SPI (Doesn't like "delay()" function too much)
   sensor.sample_fsm();
 
+  //--- State Machine ---//
   switch (control.status){
 
+    //Default state
     case CONTROL_STATUS_STATIONARY:
-      if(Serial.available() == true){
-        start_flag = false;     //this will reset mst once edf priming is done 
-        init_timer = millis();  //resets edf priming timer
-        mst = millis();         //mission start timer
-        control.status = CONTROL_STATUS_EDF_PRIMING;  //changes state to edf priming on next state
+      if(Serial.available() == true){     //wait for user input to start flight
+        //start_flag = false;     //this will reset mst once edf priming is done 
+        //--initialize all timers--//
+          init_timer = micros();  //resets edf priming timer
+          mst = micros();         //mission start timer
+          sensor_timer = micros();
+          estimator_timer = micros();
+          print_timer = micros();
+        //--initial condition setpoints
+          control.set_reference(SETPOINT_Z, 0.400f);
+          control.set_reference(SETPOINT_YAW, d2r*60);   
+        //--jump to edf-priming state    
+          control.status = CONTROL_STATUS_EDF_PRIMING;  //changes state to edf priming on next state
       }
     break;
     
     case CONTROL_STATUS_EDF_PRIMING:
       control.act.edf.writeMicroseconds(EDF_IDLE_PWM);
-      if(millis() - init_timer <= 6000){          //hold EDF priming PWM signal for 6 seconds 
+
+      if(micros() - init_timer <= 6000000){          //hold EDF priming PWM signal for 6 seconds 
         control.status = CONTROL_STATUS_EDF_PRIMING;
       }else{
         Serial.println("priming finished..."); 
@@ -98,33 +113,38 @@ void loop() {
     break;
 
     case CONTROL_STATUS_FLYING:
-
       run_hover_program();
-      step_response_state_machine(3000, 3.00f);
+      step_response_state_machine(3000000, 3.00f);
   
     break;
     
     case CONTROL_STATUS_LANDING:
     //TODO: Change params for landing
+      run_hover_program();
+      step_response_state_machine(3000000, 3.00f);
     break;
 
     case CONTROL_STATUS_IMU_CALIBRATION:
 
-      if(millis() - print_timer >= (DT_MSEC * 20)  ){       //must use this type of timer for delays 
-        print_timer = millis();
+      if(micros() - print_timer >= (DT_USEC * 20)  ){       //must use this type of timer for delays 
+        print_timer = micros();
         sensor.print_fsm();
       }
+      //--continously sample IMU and check if all sensors within are fully calibrated (3,3,3)
       if(sensor.data.gyroAccuracy == 3 && sensor.data.quatAccuracy == 3 && sensor.data.linAccuracy == 3){
-        //sensor.print_fsm();
+        count++;
+        
+        //Serial.println("IMU calibration done..."); 
+        //Serial.println("Now in wait mode..."); 
+       //control.status = CONTROL_STATUS_STATIONARY;
+       }if(count >= 10){
         Serial.println("IMU calibration done..."); 
         Serial.println("Now in wait mode..."); 
         control.status = CONTROL_STATUS_STATIONARY;
-      }else{
-        // once calibrated, grab current yaw angle and set it as setpoint 
-        //so the RW holds
-       // control.set_reference(SETPOINT_YAW, sensor.data.yaw);
-        control.status = CONTROL_STATUS_IMU_CALIBRATION;
-      }
+        }else{
+          control.status = CONTROL_STATUS_IMU_CALIBRATION;
+        }
+       
     break;
     
     default:
@@ -137,9 +157,9 @@ void loop() {
 
 void run_hover_program(void){
       //..... Sensor Timer .....//
-      if(millis() - sensor_timer >= DT_MSEC){
+      if(micros() - sensor_timer >= DT_USEC){
         //update timer
-        sensor_timer = millis();    //update timer
+        sensor_timer = micros();    //update timer
         //sample lidar
         sensor.sample_lidar();      //read lidar 
         //execute estimator
@@ -150,11 +170,11 @@ void run_hover_program(void){
                         sensor.estimate.vy, 
                         sensor.estimate.x, 
                         sensor.estimate.y, 
-                        0.00f);
+                        sensor.data.yaw);
 
         //take output of pos controller and set as reference for attitude controller
-        control.set_reference(SETPOINT_ROLL, control.U_pos(0));
-        control.set_reference(SETPOINT_PITCH, control.U_pos(1));
+         control.set_reference(SETPOINT_ROLL, control.U_pos(0));
+         control.set_reference(SETPOINT_PITCH, control.U_pos(1));
 
         //runn attitude controller + control allocator
         control.lqr(sensor.data.roll, 
@@ -169,8 +189,8 @@ void run_hover_program(void){
       }
 
       //..... Estimator Timer .....//   
-      if(millis() - estimator_timer >= DT_MSEC){
-        estimator_timer = millis();
+      if(micros() - estimator_timer >= DT_USEC){
+        estimator_timer = micros();
         sensor.sample_flow();       //read flow
         //control.actuate();
         //control.actuate_servos();
@@ -178,29 +198,15 @@ void run_hover_program(void){
       }
 
       //..... Print Timer .....//
-      if(millis() - print_timer >= (DT_MSEC * 2)  ){
-        print_timer = millis();
+      if(micros() - print_timer >= (DT_USEC * 2)  ){
+        print_timer = micros();
         //control.print_debug();
         print_control_imu();
-        print_control_imu_estimater();
+        //print_control_imu_estimater();
         //print_controller();
         //sensor.print_estimator();
         // print_estimator_main();
         //flow_debugger();
-
-        //---- debugger ----//
-        // Serial.print(r2d*sensor.data.roll);
-        // Serial.print(",   ");
-        // Serial.print(r2d*control.U_pos(0));
-        // Serial.print(",   ");
-        // Serial.print(sensor.debug.x_int);
-        // Serial.print(",   ");
-        // Serial.print(r2d*sensor.data.pitch);
-        // Serial.print(",   ");
-        // Serial.print(r2d*control.U_pos(1));
-        // Serial.print(",   ");
-        // Serial.print(sensor.debug.y_int);
-        // Serial.println(",   ");
 
       }
 }
@@ -209,13 +215,13 @@ void run_hover_program(void){
 
 void step_response_state_machine(float step_interval_ms, float angle)
 {
-  float elapsed_time{millis() - mst};
+  float elapsed_time{micros() - mst};
 
   if(elapsed_time >= (step_interval_ms * 1) && elapsed_time < (step_interval_ms * 2) )
   {
     // control.set_reference(SETPOINT_PITCH, 0.00f);
     // control.set_reference(SETPOINT_ROLL , 0.00f);
-    control.set_reference(SETPOINT_Z , 0.30f);
+    control.set_reference(SETPOINT_Z , 0.40f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
     
@@ -223,35 +229,36 @@ void step_response_state_machine(float step_interval_ms, float angle)
 
   else if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3))
   {
-    control.set_reference(SETPOINT_Z , 0.30f);
+    control.set_reference(SETPOINT_Z , 0.40f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
   else if(elapsed_time >= ( step_interval_ms * 3 ) && elapsed_time < (step_interval_ms * 4))
   {
-    control.set_reference(SETPOINT_Z , 0.30f);
+    control.set_reference(SETPOINT_Z , 0.40f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 4) && elapsed_time <= (step_interval_ms * 5))
   {
-    control.set_reference(SETPOINT_Z , 0.30f);
+    control.set_reference(SETPOINT_Z , 0.40f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 5) && elapsed_time < (step_interval_ms * 6))
   {
-    control.set_reference(SETPOINT_Z , 0.60f);
+    control.set_reference(SETPOINT_Z , 0.40f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
   else if(elapsed_time >= (step_interval_ms * 6) && (elapsed_time < step_interval_ms * 7))
   {
-    control.set_reference(SETPOINT_Z , 0.10f);
+    //control.status = CONTROL_STATUS_LANDING;
+    control.set_reference(SETPOINT_Z , 0.050f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
@@ -306,14 +313,17 @@ void step_response_state_machine(float step_interval_ms, float angle)
   // }
 
   //else 
-  if(elapsed_time >= (step_interval_ms * 7))
-  {
-    control.act.edf_shutdown();
-    control.act.zero_servos();
-    control.act.zero_rw();
-    //while(1);
-    control.status = CONTROL_STATUS_STATIONARY;
-  }
+ 
+  #ifndef SENSOR_ONLY
+    if(elapsed_time >= (step_interval_ms * 5) && sensor.estimate.z <= .150f)
+    {
+      control.act.edf_shutdown();
+      control.act.zero_servos();
+      control.act.zero_rw();
+      //while(1);
+      control.status = CONTROL_STATUS_STATIONARY;
+    }
+  #endif
 
 
 
@@ -326,19 +336,29 @@ void print_control_imu(void)
 {
   char text[250];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f, %0.5f, %0.5f,  \t  %0.5f, %0.5f, %0.5f,     \t  %0.5f, %0.5f, %0.5f,    ",
-    r2d*sensor.data.roll,
-    r2d*control.SP_hover_int(0),
-    r2d*control.cd.u(0), 
+  sprintf(text, "%0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  \t  %0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  \t  %0.5f, %0.5f, %0.5f,     \t  %0.5f, %0.5f, %0.5f,   %0.5f, %i,      %i,%i,%i    ",
     
-
-    r2d*sensor.data.pitch,
-    r2d*control.SP_hover_int(1),
-    r2d*control.cd.u(1), 
-
+    sensor.estimate.x,
+    sensor.estimate.vx,
+    r2d*control.cd.u(0),
+    r2d*sensor.data.roll,
+    r2d*control.U_pos(0), 
+    
+    sensor.estimate.y,
+    sensor.estimate.vy,
+    r2d*control.cd.u(1),
+    r2d*sensor.data.pitch, 
+    r2d*control.U_pos(1),
+    
     r2d*sensor.data.yaw,
-    r2d*control.SP_pos(2),
-    control.cd.u(2) 
+    r2d*control.SP_hover_int(2),
+    control.cd.u(2),
+
+    sensor.data.ez,
+    sensor.estimate.z,
+    sensor.estimate.vz,
+    control.cd.Tm,
+    control.act.ad.pwmedf,
 
     // sensor.debug.x_int,
     // sensor.data.vx,
@@ -356,12 +376,12 @@ void print_control_imu(void)
     // control.cd.Tedf,
     // control.act.ad.pwmedf,
 
-    // sensor.data.linAccuracy,
-    // sensor.data.gyroAccuracy,
-    // sensor.data.quatAccuracy
+    sensor.data.linAccuracy,
+    sensor.data.gyroAccuracy,
+    sensor.data.quatAccuracy
     );
 
-  Serial.print(text);
+  Serial.println(text);
 
 }
 
@@ -369,22 +389,14 @@ void print_control_imu_estimater(void)
 {
   char text[280];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f, %0.5f, %0.5f,   %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f,    %0.5f, %0.5f,  \t %0.5f, %0.5f, %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f,  \t  ",
-       sensor.data.ez,
-    sensor.data.evz_accel,
+  sprintf(text, "%0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f,     \t %0.5f, %0.5f,    \t  %0.5f, %i,  \t  ",
+    sensor.data.ez,
     sensor.estimate.z,
     sensor.estimate.vz,
-    sensor.debug.xpre_vz,
 
-    sensor.debug.x_int,
-    sensor.debug.xpre_vx,
-    sensor.debug.x_comp,
     sensor.estimate.vx,
     sensor.estimate.x,
     
-    sensor.debug.y_int,
-    sensor.debug.xpre_vy,
-    sensor.debug.y_comp,
     sensor.estimate.vy,
     sensor.estimate.y,
 
@@ -394,7 +406,7 @@ void print_control_imu_estimater(void)
     // sensor.estimate.vz,
     // sensor.debug.xpre_z,
 
-    control.cd.Tedf,
+    control.cd.Tm,
     control.act.ad.pwmedf);
 
   Serial.println(text);

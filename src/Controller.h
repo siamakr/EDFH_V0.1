@@ -16,11 +16,14 @@
 #define ledf .050                                               //m
 #define lrw 0.150                                               //m
 #define MASS_EDF .700                                           //Kg
-#define MASS 2.17                                              //Kg
+#define MASS 2.295                                              //Kg
 //#define MASS 2.9                                              //Kg
-#define MAX_TVC_DEFLECTION_DEG 5.00f                           //deg
+#define MAX_TVC_DEFLECTION_DEG 4.00f                           //deg
 #define MAX_TVC_DEFLECTION_RAD (d2r * MAX_TVC_DEFLECTION_DEG)   //rad
-#define G 9.87                                                  //m/s^2
+#define MAX_YAW_TORQUE 0.21
+#define MIN_THRUST 10.00                                        //Newtons
+#define MAX_THRUST 31.00                                        //Newtons
+#define G 9.807                                                  //m/s^2
 
 
 //MASS-MOMENT-OF-INERTIA OF VEHICLE
@@ -75,8 +78,8 @@ public:
     Actuator act;
     controller_data_t cd;
     control_setpoint_t setpoint; 
-    Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.60,0.00};    //Desired Reference
-    Matrix<12,1> SP_hover_int = {0.00f,0.00f,0.00f,  0.00f,0.00f,0.00f,  0.650f,0.00f,0.00f,  0.00f,0.00f,0.00f};    //Desired Reference
+    Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};    //Desired Reference
+    Matrix<12,1> SP_hover_int = {0.00f,0.00f,0.00f,  0.00f,0.00f,0.00f,  0.0f,0.00f,0.00f,  0.00f,0.00f,0.00f};    //Desired Reference
     control_status_t status;
 
 
@@ -84,11 +87,8 @@ public:
     
     void init(void);
 
-    bool edf_startup(int seconds);
-
     void lqr(float r, float p, float y, float gx, float gy, float gz, float z, float vz);
     
-    void lqr_int(float r, float p, float y, float gx, float gy, float gz, float z, float vz);
 
     void lqr_pos( float x, float y, float vx, float vy, float yaw );
 
@@ -122,21 +122,21 @@ private:
 
     void IIR(float & new_sample, float prev_output, float alpha);
     //Feedforward gains
-    volatile float _gain_ff_roll{-0.00005};
-    volatile float _gain_ff_pitch{-0.00005};
+    volatile float _gain_ff_roll{0.000};
+    volatile float _gain_ff_pitch{0.00};
     //LQR Gains 
     //Use these for gain scheduling //
-    volatile float _gain_roll{0.250};               //ROLL GAIN
-    volatile float _gain_pitch{_gain_roll};          //PITCH GAIN
-    volatile float _gain_yaw{.0916};                 //YAW GAIN
+    volatile float _gain_roll{0.205};               //ROLL GAIN
+    volatile float _gain_pitch{.2050};          //PITCH GAIN
+    volatile float _gain_yaw{.2000};                 //YAW GAIN
 
-    volatile float _gain_gx{0.10500};                 //GX GAIN
-    volatile float _gain_gy{_gain_gx};               //GY GAIN 
-    volatile float _gain_gz{.0391};                  //GZ GAIN
+    volatile float _gain_gx{0.10800};                 //GX GAIN
+    volatile float _gain_gy{0.10800};               //GY GAIN 
+    volatile float _gain_gz{.0831};                  //GZ GAIN
 
-    volatile float _gain_z{10.10};                   //ALT VELOCITY
-    volatile float _gain_vz{33.6942};                  //ALTITUDE
-    volatile float _gain_z_int{0.00f};                  //ALTITUDE INTEGRAL GAIN
+    volatile float _gain_z{11.10};                   //ALT VELOCITY
+    volatile float _gain_vz{6.6942};                  //ALTITUDE
+    volatile float _gain_z_int{2.00f};                  //ALTITUDE INTEGRAL GAIN
 
     volatile float _gain_roll_int{0.5};              //ROLL INTEGRAL GAIN
     volatile float _gain_pitch_int{0.5};             //PITCH INTEGRAL GAIN       
@@ -146,7 +146,7 @@ private:
     volatile float _int_bound_alt{0.050f};
     volatile float _max_int_def{d2r*2.00f};
 
-    volatile float _alpha_servo{0.080};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
+    volatile float _alpha_servo{0.200};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
 
     float error_integral_x{0};
     float error_integral_y{0};
@@ -156,9 +156,10 @@ private:
     /* Matrix<2,6> K_pos = {     0.0000,  -0.1368,   0.0000,  -0.1744,   0.0000,  -0.0250,
                               0.1368,   0.0000,   0.1744,   0.0000,   0.0250,   0.0000,  }; */
 
-    Matrix<2,6> K_pos = {   0.0000,  0.1031,   0.0000,  0.1400,   0.0000,  0.0500,
-                            -0.1031,   0.0000,   -0.1400,   0.0000,   0.0500,   0.0000, };
-                            // x      // y      // vx     // vy     // xint   // yint
+    Matrix<2,6> K_pos = {   0.0000,  0.08031,   0.0000,  0.105000,   0.0000,  -0.00000,
+                            -0.08031,   0.0000,   -0.105000,   0.0000,   0.00000,   0.0000, };
+                            // x      // y      // vx     // vy     // xit   // yint
+    
 
 
     Matrix<12,1> _gain_matrix = {   _gain_roll, _gain_pitch, _gain_yaw, 

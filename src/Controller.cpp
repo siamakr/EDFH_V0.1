@@ -10,7 +10,7 @@
     
     void Controller::init(void)
     {
-        //attach actuator pins
+        //Initialize/zero all actuators
         act.init_servos();
         act.init_rw();
         act.init_edf();
@@ -19,22 +19,6 @@
         
         
     }
-
-    bool Controller::edf_startup(int seconds)
-    {
-        //Make sure the edf motor is off
-        act.edf.writeMicroseconds(EDF_OFF_PWM);
-
-        float timer{millis()};
-
-        while(millis() - timer <= seconds * 1000)
-        {
-            act.edf.writeMicroseconds(EDF_MIN_PWM+50);
-        }
-
-        return true;
-    }
-
 
 
     void Controller::lqr(float r, float p, float y, float gx, float gy, float gz, float z, float vz)
@@ -48,7 +32,8 @@
 
         //load state vecotr
         Xs = {r, p, y, gx, gy, gz, z, vz};
-
+        // REF(0) -= U_pos(0);
+        // REF(1) += U_pos(1);
         //calculate reference error
         error = Xs - REF;
 
@@ -70,60 +55,50 @@
         U(3) += MASS * G;         //Normal Mode
 
         //Calculate each component of the Thrust Vector
-        float Tx{ U(3) * sin(U(0)) - (MASS_EDF * sin(U(0)))};
-        float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (MASS_EDF * sin(U(1))) };
-        float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
+        float Tx{ U(3) * U(0)};
+        float Ty{ U(3) * U(1) };
+        float Tz{ U(3) }; 
 
-        //Get the magnitude of the thrust vector components 
+        //Calculate desired torque for roll/pitch using alternate method
+        cd.trq_x = Tx * COM_TO_TVC;
+        cd.trq_y = Ty * COM_TO_TVC;
+
+        //Get the magnitude of the thrust vector
         float Tm{sqrt(pow(Tx,2) + pow(Ty,2) + pow(Tz,2))};
+
+        //Actuation angles w.r.t thrust vector
         float delta_xx{asin(Tx/(Tm))};
         float delta_yy{asin(Ty/(Tm))};
-       // U(3) = Tm;
-        //-----------delete below//debugging only-----------//
-        // cd.delta_x = delta_xx;
-        // cd.delta_y = delta_yy;
-        // LIMIT(cd.delta_x, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        // LIMIT(cd.delta_y, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        //-----------delete above/debugging only-----------//
+       
+        //Using alternate method
+        // U(0) = delta_xx;
+        // U(1) = delta_yy;
+        // U(3) = Tm;
+
+        //convert desired Yaw torque into thrust force per yaw motor
+        const float desired_yaw_force = ((U(2) / lrw) / 2) ;                    //dividing by 2 to split force between 2 yaw props
+        const float desired_yaw_grams{(desired_yaw_force/9.8) * 1000};
 
         //Feedforward
-        U(0) += error(0) * _gain_ff_roll;
-        U(1) += error(1) * _gain_ff_pitch;
+        // U(0) += U_pos(0) * _gain_ff_roll;
+        // U(1) += U_pos(1) * _gain_ff_pitch;
 
         //Filter
-        // IIR(delta_xx, cd.delta_xx, _alpha_servo);
-        // IIR(delta_yy, cd.delta_yy, _alpha_servo);
-
-        //convert desired torque (U(3) to Desired omega for reaction wheel
-  
-
         IIR(U(0), cd.u(0), _alpha_servo);
         IIR(U(1), cd.u(1), _alpha_servo);
 
-        //Limit
-        // LIMIT(delta_xx, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        // LIMIT(delta_yy, -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-
+        //Limit/Clamp
         LIMIT(U(0), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
         LIMIT(U(1), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD );
-        LIMIT(U(2), 0, 0.21);            //FROM 10 RAD/S TO 80 RAD/S THIS IS CURRENTLY TORQUE THOUGH
-        LIMIT(U(3), 10.00f, 31.00f);
+        LIMIT(U(2), 0, MAX_YAW_TORQUE);            //FROM 10 RAD/S TO 80 RAD/S THIS IS CURRENTLY TORQUE THOUGH
+        LIMIT(U(3), MIN_THRUST, MAX_THRUST);
+
 
         //Actuate
-        //actuate(delta_xx, delta_yy, Tm);
-        //convert desired torque into force (N)
-        float desired_yaw_force = ((U(2) / lrw) / 2) ;                    //dividing by 2 to split force between 2 roll props
-        float desired_yaw_grams{(desired_yaw_force/9.8) * 1000};
-        //Actuate servos/edf motor 
         act.writeEDF((float) U(3));
         act.writeXservo((float) r2d * U(0));
         act.writeYservo((float) r2d * U(1));
         act.writeRW(desired_yaw_grams);
-
-
-        // act.writeXservo((float) r2d * -delta_xx);
-        // act.writeYservo((float) r2d * -delta_yy);
-       // act.writeEDF((float) Tm);
 
         //Store data for next iteration 
         cd.delta_xx = delta_xx;
@@ -131,123 +106,11 @@
         cd.e_int = error;
         // cd.u(0) = delta_xx;
         // cd.u(1) = delta_yy;
-        cd.u(0) = U(0);
-        cd.u(1) = U(1);
-        cd.u(2) = desired_yaw_force * 2;
-        cd.u(3) = Tm;
-        cd.Tedf = U(3);
-
-
-
-    }
-
-    //This method repeats the lqr method but adds integral action for each output 
-    // ie; for roll(xservo), pitch(yservo), yaw(reaction wheel), Ft (edf motor)
-    // each integral action is added into the state vector Xs 
-    void Controller::lqr_int(float r, float p, float y, float gx, float gy, float gz, float z, float vz)
-    {
-        //Envoke Matricies on the function stack and initialize them
-        Matrix<4,1> U = {0.00}; // Control Vector
-        Matrix<12,1> error {0.00}; // State error vector
-        Matrix<4,12> K = K_int;
-        Matrix<12,1> REF = SP_hover_int;         //store desired setpoint (either by user or from Position Controller Output)
-        Matrix<12,1> Xs = {0.00};     //State Vector
-        Matrix<4,1> U_out = {0.00f};
-
-          //load state vecotr
-        Xs = {r, p, y, gx, gy, gz, z, vz};
-
-        //calculate reference error
-        error = Xs - REF;
-
-        //Clamp the integral action to a +- x-degrees neighborhood of the desired attitude. 
-        //Calculate integral action and put updated error values back into error matrix
-        //the cd.e_int(•) term is the previous error in the integral positions in error vector
-        //altitude integral action 
-        error(8)  = ( ( error(7) >= (-1 * _int_bound_alt) ) || ( error(7) <= _int_bound_alt ) ) ? error(8) + ( _gain_z_int     * error(7) * DT_SEC) : 0.00f;       
-        //attitude integral actions
-        error(9)  = ( ( error(1) >= (-1 * _int_bound_att) ) && ( error(1) <= _int_bound_att ) ) ? cd.u(9) + ( _gain_roll_int  * error(1) * DT_SEC) : 0.00f;       
-        error(10) = ( ( error(2) >= (-1 * _int_bound_att) ) && ( error(2) <= _int_bound_att ) ) ? cd.u(10) + ( _gain_pitch_int * error(2) * DT_SEC) : 0.00f;       
-        error(11) = ( ( error(3) >= (-1 * _int_bound_att) ) && ( error(3) <= _int_bound_att ) ) ? cd.u(11) + ( _gain_yaw_int   * error(3) * DT_SEC) : 0.00f;  
-
-        error(9) = limit(error(9), -_max_int_def, _max_int_def);     
-        error(10) = limit(error(10), -_max_int_def, _max_int_def);     
-        error(11) = limit(error(11), -_max_int_def, _max_int_def);     
-       
-
-    
-        //Run LQR Controller + full integral action
-        U = -K * error;
-
-        //Update the EDF motor control signal with Vehicle weight
-        U(3) += MASS * G;         //Normal Mode
-        //U(3) = MASS * G;            //Hold-down Gimbal test Mode
-
-        //Thrust in each axis with corrected torque term 
-        //due to the change in J when the EDF motor is actuated. 
-        //the 2nd term for each thrust component subtracts the static torque induced by the gimballed 
-        //edf motor.
-
-        //Calculate each component of the Thrust Vector
-        // float Tx{ U(3) * sin(U(0)) - (MASS_EDF * sin(U(0)))};
-        // float Ty{ U(3) * sin(U(1)) * cos(U(0)) - (MASS_EDF * sin(U(1))) };
-        // float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
-
-        //Calculate each component of the Thrust Vector
-        float Tx{ U(3) * sin(U(0)) };
-        float Ty{ U(3) * sin(U(1)) * cos(U(0)) };
-        float Tz{ U(3) * cos(U(1)) * cos(U(0)) };   
-
-
-
-        //Get the magnitude of the thrust vector components 
-        float Tm{sqrt(pow(Tx,2) + pow(Ty,2) + pow(Tz,2))};
-
-        //Using the  EmboRockETH paper's outline of attaining gimbal angles 
-        //from each thrust vector component and magnitude of thrust. 
-        cd.angle_xx = limit(IIRF(asin(Tx/(Tm)),             cd.u_output(3), _alpha_servo), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
-        cd.angle_yy = limit(IIRF(asin(Ty/(Tm)),             cd.u_output(4), _alpha_servo), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
-
-        //Feedforward 
-        cd.angle_xx -= error(0) * _gain_ff_roll;
-        cd.angle_yy -= error(1) * _gain_ff_pitch;
-
-        //limit servo angles to +-8º
-        //filtering and limiting in one line 
-        // cd.angle_x = limit(IIRF(cd.angle_xx, cd.u(0), 0.08), d2r * -8.00f, d2r * 8.00f);
-        // cd.angle_y = limit(IIRF(cd.angle_yy, cd.u(1), 0.08), d2r * -8.00f, d2r * 8.00f);
-        float u0 = U(0);
-        float u1 = U(1);
-
-        cd.angle_x = limit(IIRF(u0, cd.u_output(0), _alpha_servo), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
-        cd.angle_y = limit(IIRF(u1, cd.u_output(1), _alpha_servo), -1 * MAX_TVC_DEFLECTION_RAD, MAX_TVC_DEFLECTION_RAD);
-        cd.Tedf = limit(Tm, 21.00f, 31.00f);
-
-        if(isnan(cd.angle_x)) cd.angle_x = 0.00f;
-        if(isnan(cd.angle_y)) cd.angle_y = 0.00f;
-
-
-        
-        //Actuate servos/edf motor 
-        act.writeXservo((float)  -cd.angle_xx);
-        act.writeYservo((float)  -cd.angle_yy);
-        act.writeEDF((float) cd.Tedf);
-
-        //Store debug/filtering data into struct
-        cd.u_output(0) = cd.angle_x;
-        cd.u_output(1) = cd.angle_y;
-        cd.u_output(2) = cd.angle_xx;
-        cd.u_output(3) = cd.angle_yy;
-
-        
         cd.u = U;
-
-        cd.e_int = error; 
-    
         cd.Tm = Tm;
-        cd.Tx = Tx; 
-        cd.Ty = Ty; 
-        cd.Tz = Tz;
+
+
+
     }
 
     void Controller::lqr_pos( float x, float y, float vx, float vy, float yaw ){
@@ -282,8 +145,8 @@
     output = K_pos * error;
 
     // Limit position output to +-10 degress in roll and pitch 
-    LIMIT( output(0), -10 * DEG_TO_RAD, 10 * DEG_TO_RAD );
-    LIMIT( output(1), -10 * DEG_TO_RAD, 10 * DEG_TO_RAD );
+    LIMIT( output(0), -10 * d2r, 10 * d2r );
+    LIMIT( output(1), -10 * d2r, 10 * d2r );
 
     // Use the output of the positional controller as setpoints for the hover controller
     U_pos = output;
@@ -316,16 +179,6 @@
     }
 
     void Controller::set_reference( control_setpoint_t cs, float value ){
-       // value = value * d2r;
-
-        // switch( cs ){
-        //     // case SETPOINT_X: SP_pos(0) = value; break;
-        //     // case SETPOINT_Y: SP_pos(1) = value; break;
-        //     // case SETPOINT_Z: SP_hover(6) = value; break;
-        //     case SETPOINT_ROLL: SP_hover_int(0) = value; break;
-        //     case SETPOINT_PITCH: SP_hover_int(1) = value; break;
-        //     case SETPOINT_YAW: SP_hover_int(2) = value; break;
-        // }
 
         switch( cs ){
             case SETPOINT_X: SP_pos(0) = value; break;

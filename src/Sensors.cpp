@@ -15,7 +15,7 @@
         //... GARMIN LIDAR functions end ...//
     void Sensors::fsm_init(void)
     {
-                //..... FSM305/BNO080 Init .....//
+        //..... FSM305/BNO080 Init .....//
         Serial.print("FSM Init start..."); 
         //delay(300);
 
@@ -30,19 +30,12 @@
         fsm.enableRotationVector(DT_MSEC);  // quat
         //fsm.enableGameRotationVector(DT_MSEC);
         fsm.enableGyro(DT_MSEC);  // rad/s
-        fsm.enableGyroIntegratedRotationVector(DT_MSEC);
+        //fsm.enableGyroIntegratedRotationVector(DT_MSEC);
         //fsm.enableMagnetometer(DT_MSEC);  // cannot be enabled at the same time as RotationVector (will not produce data)
         
         Serial.println("FSM Init Finished..."); 
         delay(300);
         sample_fsm();
-        // while(!(data.gyroAccuracy == 3 && data.linAccuracy == 3 && data.quatAccuracy == 3 ) )
-        // {
-        //     sample_fsm();
-        //     delay(250);
-        //     print_fsm();
-        //     Serial.println("move vehicle to calibrate IMU ");
-        // }
         //save current position of yaw as the zero. 
         yaw_origin = data.yaw;
     }
@@ -119,7 +112,7 @@
 
         if(fsm.dataAvailable() == true)
         {
-
+            // switched x and y axes due to mounting orientation
             save_calibrate_fsm();
             //..... Sample IMU .....//
             //... Linear Accel ...//
@@ -165,8 +158,9 @@
             //... Euler Angle Representation ...//
             data.pitch = fsm.getRoll() + d2r* 0.6578f;
             data.roll = fsm.getPitch() + d2r* 1.3772;
-            data.yaw = fsm.getYaw() + FSM_YAW_OFFSET_RAD;    
-            //data.yaw = 0.00f;
+            data.yaw = fsm.getYaw();    
+            //data.yaw = rotate_yaw(yaw_raw);
+            //data.yaw = fsm.getYaw();
 
             
         }
@@ -177,9 +171,6 @@
     //... GARMIN LIDAR functions Begin ...//
     void Sensors::sample_lidar(void)
     {
-        //uint8_t newDistance = 0;
-        //uint16_t distance{0};
-    
         if (garmin.getBusyFlag() == 0)
         {
             // Trigger the next range measurement
@@ -191,19 +182,9 @@
             // Report to calling function that we have new data
             data.status.lidar = 1;
         }
-        //convert from cm to m
-       // data.z = (float)distance/100.00f;
     }
 
-    void Sensors::sample_flow(){
-        //sample the raw velocity (Must be altitude/attitude corrected)
-        // uint16_t vx, vy;
-        // flow.readMotionCount( &vx, &vy );
-
-        // data.vx = (float) vx;
-        // data.vy = (float) vy;
-
-        // data.status.flow = 1;
+void Sensors::sample_flow(){
 
     static uint32_t last_sample;
     int16_t dx, dy;
@@ -220,9 +201,6 @@
     //---debugging ---//
     debug.vx_raw = dx;
     debug.vy_raw = dy;
-
-
-
 
     // Convert change in pixels to unitless velocity 1/s
     ofx = ((float) dx / dt ) / PMW3901_FOCAL; // Focal length (in px) found experimentally
@@ -275,17 +253,17 @@
     v[1] = data.vy * p[2] - data.gx * p[2]; 
     rotate_to_world( v );
 
-    debug.x_comp += v[0] * DT_SEC;
-    debug.y_comp += v[1] * DT_SEC;
+    // debug.x_comp += v[0] * DT_SEC;
+    // debug.y_comp += v[1] * DT_SEC;
 
     // Rotate acceleration to world frame
     a[0] = data.ax; a[1] = data.ay; a[2] = data.az;
     rotate_to_world( a );
 
     //integrate az to get vz from accelerometer for testing 
-    data.evz_accel += a[2] * DT_SEC;
-    data.evz_accel = IIR(data.evz_accel, data.evz_accel_prev, 0.05);
-    data.evz_accel_prev = data.evz_accel;
+    // data.evz_accel += a[2] * DT_SEC;
+    // data.evz_accel = IIR(data.evz_accel, data.evz_accel_prev, 0.05);
+    // data.evz_accel_prev = data.evz_accel;
 
     //update the world frame accel values 
     data.axw = a[0];
@@ -324,10 +302,10 @@
     Xpre = (A * Xe) + (B * U_est); 
 
     //---debugging---//
-    debug.xpre_vx = Xpre(3);
-    debug.xpre_vy = Xpre(4);
-    debug.xpre_vz = Xpre(5);
-    debug.xpre_z = Xpre(2);
+    // debug.xpre_vx = Xpre(3);
+    // debug.xpre_vy = Xpre(4);
+    // debug.xpre_vz = Xpre(5);
+    // debug.xpre_z = Xpre(2);
 
     Xe = Xpre + Kf*(Z - H*Xpre); 
 
@@ -390,8 +368,8 @@ void Sensors::clamp(float &value, float min, float max){
         //  float u = 0;
         float p = data.roll;
         float q = data.pitch;
-        //float u = data.yaw;
-        float u = 0.00f;
+        float u = data.yaw;
+        //float u = 0.00f;
         Matrix<3,1> in = { vector[0], vector[1], vector[2] };
         Matrix<3,1> out = {0,0,0};
 

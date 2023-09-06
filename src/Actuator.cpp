@@ -86,7 +86,7 @@ bool Actuator::prime_edf(int delay_time_ms, float start_timer)
     }
 }
 
-bool Actuator::servo_dance_x(float max_angle, int delay_time_ms)
+bool Actuator::servo_dance(float max_angle, int delay_time_ms)
 {
     //max_angle refers to the radius that parametrization 
     //of the circle to be "drawn" by the tip of the TVC motor
@@ -109,9 +109,9 @@ bool Actuator::servo_dance_x(float max_angle, int delay_time_ms)
         delay(delay_time_ms);
     }
     
-    // delay(1000);
+    delay(1000);
 
-    // zero_servos();
+    zero_servos();
 
     return true;
 }
@@ -166,7 +166,7 @@ void Actuator::writeRW(float grams){
     int pwm{ round( (RW_P1_GRAMS * pow(grams,2)) + RW_P2_GRAMS * grams + RW_P3_GRAMS )};
     LIMIT(pwm, 900, 2000);
     ad.pwmrw = pwm;
-    ad.omega_rw = grams;
+    ad.antirotor_thrust_g = grams;
     rw.writeMicroseconds(pwm);
 }
 
@@ -176,67 +176,8 @@ void Actuator::edf_shutdown(void)
     edf.writeMicroseconds(EDF_OFF_PWM);
 }
 
-// to shut everything down if we go past max set angle
-void Actuator::emergency_check(float & r, float & p)
+
+void Actuator::LIMIT(int & value, int min, int max )
 {
-    if(r > MAX_VEHICLE_ANGLE_DEG || r < -MAX_VEHICLE_ANGLE_DEG || p > MAX_VEHICLE_ANGLE_DEG || p < -MAX_VEHICLE_ANGLE_DEG)
-    {
-        edf_shutdown();
-        zero_servos();
-        while(1);       //This should return the state machine into hold state
-    }
+    value = ( (value <= min) ? min : (value >= max ? max : value) );
 }
-
-void Actuator::suspend(void)
-{
-    edf_shutdown();
-    zero_servos();
-    while(1);       //This should return the state machine into hold state
-}
-
-bool Actuator::step_response_x_servo(int angle_deg)
-{
-    zero_servos();
-    delay(1000);
-
-    writeXservo(angle_deg);
-    delay(1000);
-
-    int start_pwm{ad.pwmx};
-    float timer{millis()};
-    writeXservo(-angle_deg); 
-
-    while(ad.pwmx >= -1 * start_pwm);
-    float elapsed_time = millis() - timer;
-
-    Serial.println(elapsed_time);
-
-    return true;
-}
-
-bool Actuator::step_response_y_servo(int angle_deg)
-{
-    zero_servos();
-    delay(1000);
-
-    writeYservo(angle_deg);
-    delay(1000);
-
-    int start_pwm{ad.pwmy};
-    float timer{millis()};
-    writeYservo(-angle_deg); 
-
-    while(ad.pwmy >= -1 * start_pwm);
-    float elapsed_time = millis() - timer;
-
-    Serial.println(elapsed_time);
-
-    return true;
-
-
-}
-
-    void Actuator::LIMIT(int & value, int min, int max )
-    {
-        value = ( (value <= min) ? min : (value >= max ? max : value) );
-    }

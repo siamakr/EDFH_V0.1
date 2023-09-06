@@ -42,7 +42,26 @@
 #define EDF_MAX_SUSTAINED_PWM 1730      //uSec
 #define EDF_IDLE_PWM 1260               //uSec
 
-//EDF Regression Polynomial Coeffs
+#define SERVO_X_CENTER_US 1390          //µs
+#define SERVO_Y_CENTER_US 1575          //µs
+#define SERVO_X_MIN_US 1026             //µs
+#define SERVO_Y_MIN_US 1026             //µs
+#define SERVO_X_MAX_US 1900             //µs
+#define SERVO_Y_MAX_US 1900             //µs
+
+// MKS Servo TVC Regression Coeffs
+#define X_P1 0.00
+#define X_P2 -37.94
+#define X_P3 1297
+//#define X_P3 1390
+
+#define Y_P1 0.00
+#define Y_P2 31.48
+//#define Y_P3 1588
+#define Y_P3 1575
+
+//[-0.013683 6.2274 1133.2]
+
 //EDF Regression Polynomial Coeffs
 //Linear V2
 // #define EDF_P1 0.00
@@ -54,34 +73,12 @@
 #define EDF_P2 20.42
 #define EDF_P3 1117
 
-//VALUES SET FOR +-15º GIMBAL ANGLE FOR BOTH X AND Y
-#define SERVO_X_CENTER_US 1422          //µs
-#define SERVO_Y_CENTER_US 1576          //µs
-#define SERVO_X_MIN_US 1026             //µs
-#define SERVO_Y_MIN_US 1026             //µs
-#define SERVO_X_MAX_US 1900             //µs
-#define SERVO_Y_MAX_US 1900             //µs
-
-///// MKS Servo TVC Regression Coeffs
-//---- with new short arm + lowest position
-#define X_P1 0.00
-#define X_P2 -37.94
-//#define X_P3 1413
-#define X_P3 1390
-
-#define Y_P1 0.00
-#define Y_P2 31.48
-//#define Y_P3 1588
-#define Y_P3 1575
-
-//[-0.013683 6.2274 1133.2]
-
-//-------- Reaction Wheel Regression Consts
+//Antiroll motor regression Coeffs (Quadratic)
 #define RW_P1_GRAMS -0.013683
 #define RW_P2_GRAMS 6.2274
 #define RW_P3_GRAMS 1033
-#define RW_MAX_SPEED_RPS 165.00f 
-#define RW_MAX_SPEED_DPS (RW_MAX_SPEED_DPS * 180.00f/PI)
+// #define RW_MAX_SPEED_RPS 165.00f 
+// #define RW_MAX_SPEED_DPS (RW_MAX_SPEED_DPS * 180.00f/PI)
 
 //  -.00025151   0.96511  -891.54
 //Physical Constraints
@@ -102,7 +99,7 @@ T clamp( T Value, T Min, T Max)
 typedef struct 
 {
     int pwmx, pwmy, pwmedf, pwmrw;
-    float ang_x, ang_y, f_thrust, omega_rw;
+    float ang_x, ang_y, f_thrust, antirotor_thrust_g;
 
 }actuator_data_t;
 
@@ -121,66 +118,29 @@ public:
     //Initializes all actuators 
     void init(void);
 
-    //Initialize MKS Servo motors 
     void init_servos(void);
-
-    //Initialize Mr.Madd EDF motor 
     void init_edf(void);
-
-    //Bring TVC system to centre
-    void zero_servos();
-
-    //Take EDF to 50% and hold for 5 seconds 
-    void prime_edf(void);
-
     void init_rw(void);
 
+
+    void zero_servos();
     void zero_rw(void);
-
-    //Take EDF to 50% and hold for desired time
+    void edf_shutdown(void);
+ 
+    void prime_edf(void);
     void prime_edf(int delay_time_ms);
-
     bool prime_edf(int delay_time_ms, float start_timer);
 
-    //Shuts EDF motor down 
-    void edf_shutdown(void);
-
-    bool servo_dance_x(float start_angle, int delay_time_ms);
-
-
     //... Actuation Functions ...//
-    
-    //Write to X servo in degrees
     void writeXservo(float angle);
-
-    //Write to X Servo in PWM µs
     void writeXservo(int pwm);
-
-    //write to Y servo in degrees
     void writeYservo(float angle);
-
-    //write to Y servo in PMW µs
     void writeYservo(int pwm);
-
-    //Write to EDF with Thrust Force (Newtons)
     void writeEDF(float Ft);
-    
-    //Write to EDF with PWM(µs)
     void writeEDF(int pwm);
+    void writeRW(float grams);
 
-        void writeRW(float grams);
-
-    //Checks vehicles Roll/Pitch for exceed in max threshold
-    void emergency_check(float & r, float & p);
-
-    //Shuts EDF motor down and goes into wait
-    //a restart will be required before implementation of 
-    //state machine
-    void suspend(void);
-
-    bool step_response_x_servo(int angle_deg);
-
-    bool step_response_y_servo(int angle_deg);
+    bool servo_dance(float start_angle, int delay_time_ms);
 
     void LIMIT(int & value, int min, int max);
 

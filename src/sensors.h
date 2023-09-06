@@ -20,6 +20,7 @@ using namespace BLA;
 #define PMW3901_WIDTH 30            // Pixels
 
 //..... Defines .....//
+#define DT_USEC 5000
 #define DT_MSEC 5.00f
 #define DT_SEC (0.0050)
 #define d2r (PI/180.00f)
@@ -103,22 +104,20 @@ public:
     estimator_data_t estimate;
     BNO080 fsm;
     PMW3901 flow;
-    // Bitcraze_PMW3901 flow_bc((int) 29);
     LIDARLite_v3HP garmin;
     uint16_t distance;
     debug_t debug;
 
-    float yaw_origin;
+    volatile float yaw_origin{0.00f};
+    volatile float yaw_raw{0.00f};
 
-
-    
     // Estimator matrixes
-    Matrix<6,6> A = {   1,  0,  0,  DT_SEC, 0,  0,
-                        0,  1,  0,  0,  DT_SEC, 0,
-                        0,  0,  1,  0,  0,  DT_SEC,
-                        0,  0,  0,  1,  0,  0,
-                        0,  0,  0,  0,  1,  0, 
-                        0,  0,  0,  0,  0,  1 };
+    Matrix<6,6> A = {   1,  0,  0,  DT_SEC, 0,  0,          //x
+                        0,  1,  0,  0,  DT_SEC, 0,          //y
+                        0,  0,  1,  0,  0,  DT_SEC,         //z
+                        0,  0,  0,  1,  0,  0,              //vx
+                        0,  0,  0,  0,  1,  0,              //vy
+                        0,  0,  0,  0,  0,  1 };            //vz
 
     Matrix<6,3> B = {   0.5*pow(DT_SEC,2),  0,              0,         
                         0,              0.5*pow(DT_SEC,2),  0,         
@@ -126,13 +125,14 @@ public:
                         DT_SEC,             0,              0,         
                         0,              DT_SEC,             0,         
                         0,              0,              DT_SEC };
+                    //  ax              ay                  az
  
-    Matrix<6,6> H = {   0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f,   
-                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 
-                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 
-                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 
-                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 
-                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f}; 
+    Matrix<6,6> H = {   0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f,   //x
+                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f,   //y
+                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f,   //z  (LIDAR)
+                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f,   //vx (FLOW)
+                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f,   //vy (FLOW)   
+                        0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f};  //vz
 
 
 
@@ -166,8 +166,8 @@ public:
      Matrix<6,6> Kf = {        0.5000,         0,         0,    0.0008,         0,         0,
                                     0,    0.5000,         0,         0,    0.0008,         0,
                                     0,         0,    0.0768,         0,         0,    0.085,
-                               0.0008,         0,         0,    0.5000,         0,         0,
-                                    0,    0.0008,         0,         0,    0.5000,         0,
+                               0.0008,         0,         0,    0.4500,         0,         0,
+                                    0,    0.0008,         0,         0,    0.4500,         0,
                                     0,         0,    1.0000,         0,         0,    0.0000};
 
 
@@ -182,7 +182,7 @@ public:
  
         //FILTER PARAMS
     float _alpha_gyro{0.10};                //GYROSCOPE FILTER ALPHA
-    float _alpha_accel{0.08};               //ACCELEROMETER SIGNAL FILTER ALPHA 
+    float _alpha_accel{0.10};               //ACCELEROMETER SIGNAL FILTER ALPHA 
 
 
 
