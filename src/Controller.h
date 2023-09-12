@@ -57,6 +57,7 @@ typedef enum{
     CONTROL_STATUS_STATIONARY = 0,
     CONTROL_STATUS_EDF_PRIMING,
     CONTROL_STATUS_FLYING,
+    CONTROL_STATUS_LIFTOFF,
     CONTROL_STATUS_LANDING,
     CONTROL_STATUS_IMU_CALIBRATION
 } control_status_t; 
@@ -100,6 +101,8 @@ public:
 
     void set_reference(control_setpoint_t cs, float value);
 
+    void gain_schedule(float error_roll, float error_gx, float error_pitch, float error_gy, float error_altitude);
+
     void print_debug(void);
 
     // Position state vector
@@ -111,11 +114,7 @@ public:
     // Output from position controller
     Matrix<2,1> U_pos = {0,0};
 
-
-private:
-
-
-    float limit(float value, float min, float max);
+        float limit(float value, float min, float max);
     void LIMIT(float & value, float min, float max);
 
     float IIRF(float newSample, float prevOutput, float alpha);
@@ -126,17 +125,17 @@ private:
     volatile float _gain_ff_pitch{0.00};
     //LQR Gains 
     //Use these for gain scheduling //
-    volatile float _gain_roll{0.205};               //ROLL GAIN
-    volatile float _gain_pitch{.2050};          //PITCH GAIN
+     float _gain_roll{0.20};               //ROLL GAIN
+    float  _gain_pitch{0.20};          //PITCH GAIN
     volatile float _gain_yaw{.2000};                 //YAW GAIN
 
-    volatile float _gain_gx{0.10800};                 //GX GAIN
-    volatile float _gain_gy{0.10800};               //GY GAIN 
+    float _gain_gx{0.100};                 //GX GAIN
+    float _gain_gy{0.100};               //GY GAIN 
     volatile float _gain_gz{.0831};                  //GZ GAIN
 
-    volatile float _gain_z{11.10};                   //ALT VELOCITY
-    volatile float _gain_vz{6.6942};                  //ALTITUDE
-    volatile float _gain_z_int{2.00f};                  //ALTITUDE INTEGRAL GAIN
+    volatile float _gain_z{5.10};                   //ALT VELOCITY
+    volatile float _gain_vz{3.6942};                  //ALTITUDE
+    volatile float _gain_z_int{0.00f};                  //ALTITUDE INTEGRAL GAIN
 
     volatile float _gain_roll_int{0.5};              //ROLL INTEGRAL GAIN
     volatile float _gain_pitch_int{0.5};             //PITCH INTEGRAL GAIN       
@@ -146,7 +145,7 @@ private:
     volatile float _int_bound_alt{0.050f};
     volatile float _max_int_def{d2r*2.00f};
 
-    volatile float _alpha_servo{0.200};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
+    volatile float _alpha_servo{0.150};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
 
     float error_integral_x{0};
     float error_integral_y{0};
@@ -156,9 +155,12 @@ private:
     /* Matrix<2,6> K_pos = {     0.0000,  -0.1368,   0.0000,  -0.1744,   0.0000,  -0.0250,
                               0.1368,   0.0000,   0.1744,   0.0000,   0.0250,   0.0000,  }; */
 
-    Matrix<2,6> K_pos = {   0.0000,  0.08031,   0.0000,  0.105000,   0.0000,  -0.00000,
-                            -0.08031,   0.0000,   -0.105000,   0.0000,   0.00000,   0.0000, };
+    Matrix<2,6> K_pos = {   0.0000,  -0.08031,   0.0000,  -0.2100,   0.0000,  -0.00000,
+                            -0.08031,   0.0000,   -0.2100,   0.0000,   -0.00000,   0.0000, };
                             // x      // y      // vx     // vy     // xit   // yint
+    // Matrix<2,6> K_pos = {   0.0000,  0.05031,   0.0000,  0.075000,   0.0000,  -0.00000,
+    //                         -0.05031,   0.0000,   -0.075000,   0.0000,   0.00000,   0.0000, };
+    //                         // x      // y      // vx     // vy     // xit   // yint
     
 
 
@@ -188,6 +190,10 @@ private:
 
     //These are debug matricies to use its matrix print function
     Matrix<20> debug ;
+
+
+private:
+
 
 };
 

@@ -21,8 +21,10 @@ Controller control;
 volatile float sensor_timer{0};
 volatile float print_timer{0.00f};
 volatile float estimator_timer{0.00f};
+volatile float pos_controller_timer{0.00f};
 volatile float mst{0.00f};       //Mission Start Timer
 volatile float init_timer{0.00f};
+volatile float elapsed_time{0.00f};
 //... Flags ...//
 volatile bool is_calibrated{false};  
 volatile bool start_flag{false};
@@ -66,7 +68,7 @@ void setup() {
 
   //--- Initialize initial coniditions of flight and set state machine start ---//
     control.set_reference(SETPOINT_Z, 0.400f);
-    control.set_reference(SETPOINT_YAW, d2r*10.00);
+    control.set_reference(SETPOINT_YAW, d2r*1.00);
   //--- Initialize initial coniditions of flight and set state machine start ---//
 
   control.status = CONTROL_STATUS_IMU_CALIBRATION;
@@ -102,7 +104,7 @@ void loop() {
     break;
     
     case CONTROL_STATUS_EDF_PRIMING:
-      control.act.edf.writeMicroseconds(EDF_IDLE_PWM);
+      control.act.edf.writeMicroseconds(1350);
 
       if(micros() - init_timer <= 6000000){          //hold EDF priming PWM signal for 6 seconds 
         control.status = CONTROL_STATUS_EDF_PRIMING;
@@ -112,7 +114,23 @@ void loop() {
       }
     break;
 
+    case CONTROL_STATUS_LIFTOFF:
+      control._gain_z = 0.10f;
+      control._gain_z_int = 2.00f;
+      // if(sensor.estimate.z > 0.0 && sensor.estimate.z < 0.38){
+      //   control._gain_roll = .43f;
+      //   control._gain_gx = 0.08f;
+      // }
+      run_hover_program();
+      if(sensor.estimate.z >= 0.380f) control.status = CONTROL_STATUS_FLYING;
+    break;
+
     case CONTROL_STATUS_FLYING:
+      control._gain_z = 3.100f;
+      control._gain_vz = 2.6942f;
+      control._gain_z_int = 0.0f;
+      // control._gain_roll = .16f;
+      // control._gain_gx = 0.10f;
       run_hover_program();
       step_response_state_machine(3000000, 3.00f);
   
@@ -120,6 +138,11 @@ void loop() {
     
     case CONTROL_STATUS_LANDING:
     //TODO: Change params for landing
+      control._gain_z = -0.50f;
+      control._gain_vz = 0.600f;
+      control._gain_z_int = 1.500f;
+      // control._gain_roll = .11f;
+      // control._gain_gx = 0.0814f;
       run_hover_program();
       step_response_state_machine(3000000, 3.00f);
     break;
@@ -156,66 +179,83 @@ void loop() {
 
 
 void run_hover_program(void){
-      //..... Sensor Timer .....//
-      if(micros() - sensor_timer >= DT_USEC){
-        //update timer
-        sensor_timer = micros();    //update timer
-        //sample lidar
-        sensor.sample_lidar();      //read lidar 
-        //execute estimator
-        sensor.run_estimator();
 
-        //run position controller to get roll_desired, pitch_desired vals
-        control.lqr_pos(sensor.estimate.vx, 
-                        sensor.estimate.vy, 
-                        sensor.estimate.x, 
-                        sensor.estimate.y, 
-                        sensor.data.yaw);
+    if(micros() - pos_controller_timer >= DT_USEC*10){
+    pos_controller_timer = micros();
+            //run position controller to get roll_desired, pitch_desired vals
+    control.lqr_pos(sensor.estimate.vx, 
+                    sensor.estimate.vy, 
+                    sensor.estimate.x, 
+                    sensor.estimate.y, 
+                    sensor.data.yaw);
 
-        //take output of pos controller and set as reference for attitude controller
-         control.set_reference(SETPOINT_ROLL, control.U_pos(0));
-         control.set_reference(SETPOINT_PITCH, control.U_pos(1));
+    //take output of pos controller and set as reference for attitude controller
+      control.set_reference(SETPOINT_ROLL, control.U_pos(0));
+      control.set_reference(SETPOINT_PITCH, control.U_pos(1));
 
-        //runn attitude controller + control allocator
-        control.lqr(sensor.data.roll, 
-                      sensor.data.pitch, 
-                      sensor.data.yaw, 
-                      sensor.data.gx, 
-                      sensor.data.gy, 
-                      sensor.data.gz, 
-                      sensor.estimate.z, 
-                      sensor.estimate.vz);
+  }
+    //..... Sensor Timer .....//
+    if(micros() - sensor_timer >= DT_USEC){
+      //update timer
+      sensor_timer = micros();    //update timer
+      //sample lidar
+      sensor.sample_lidar();      //read lidar 
+      //execute estimator
+      sensor.run_estimator();
 
-      }
+      // //run position controller to get roll_desired, pitch_desired vals
+      // control.lqr_pos(sensor.estimate.vx, 
+      //                 sensor.estimate.vy, 
+      //                 sensor.estimate.x, 
+      //                 sensor.estimate.y, 
+      //                 sensor.data.yaw);
 
-      //..... Estimator Timer .....//   
-      if(micros() - estimator_timer >= DT_USEC){
-        estimator_timer = micros();
-        sensor.sample_flow();       //read flow
-        //control.actuate();
-        //control.actuate_servos();
-        //control.actuate_edf()
-      }
+      // //take output of pos controller and set as reference for attitude controller
+      //  control.set_reference(SETPOINT_ROLL, control.U_pos(0));
+      //  control.set_reference(SETPOINT_PITCH, control.U_pos(1));
 
-      //..... Print Timer .....//
-      if(micros() - print_timer >= (DT_USEC * 2)  ){
-        print_timer = micros();
-        //control.print_debug();
-        print_control_imu();
-        //print_control_imu_estimater();
-        //print_controller();
-        //sensor.print_estimator();
-        // print_estimator_main();
-        //flow_debugger();
+      //runn attitude controller + control allocator
+      control.lqr(sensor.data.roll, 
+                    sensor.data.pitch, 
+                    sensor.data.yaw, 
+                    sensor.data.gx, 
+                    sensor.data.gy, 
+                    sensor.data.gz, 
+                    sensor.estimate.z, 
+                    sensor.estimate.vz);
 
-      }
+    }
+
+    //..... Estimator Timer .....//   
+    if(micros() - estimator_timer >= DT_USEC){
+      estimator_timer = micros();
+      sensor.sample_flow();       //read flow
+      //control.actuate();
+      //control.actuate_servos();
+      //control.actuate_edf()
+    }
+
+
+
+    //..... Print Timer .....//
+    if(micros() - print_timer >= (DT_USEC * 2)  ){
+      print_timer = micros();
+      //control.print_debug();
+      print_control_imu();
+      //print_control_imu_estimater();
+      //print_controller();
+      //sensor.print_estimator();
+      // print_estimator_main();
+      //flow_debugger();
+
+    }
 }
 
 
 
 void step_response_state_machine(float step_interval_ms, float angle)
 {
-  float elapsed_time{micros() - mst};
+  elapsed_time = micros() - mst;
 
   if(elapsed_time >= (step_interval_ms * 1) && elapsed_time < (step_interval_ms * 2) )
   {
@@ -257,7 +297,7 @@ void step_response_state_machine(float step_interval_ms, float angle)
 
   else if(elapsed_time >= (step_interval_ms * 6) && (elapsed_time < step_interval_ms * 7))
   {
-    //control.status = CONTROL_STATUS_LANDING;
+    control.status = CONTROL_STATUS_LANDING;
     control.set_reference(SETPOINT_Z , 0.050f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
@@ -315,8 +355,9 @@ void step_response_state_machine(float step_interval_ms, float angle)
   //else 
  
   #ifndef SENSOR_ONLY
-    if(elapsed_time >= (step_interval_ms * 5) && sensor.estimate.z <= .150f)
+    if(elapsed_time >= (step_interval_ms * 6) && sensor.estimate.z <= .150f)
     {
+
       control.act.edf_shutdown();
       control.act.zero_servos();
       control.act.zero_rw();
@@ -336,19 +377,22 @@ void print_control_imu(void)
 {
   char text[250];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  \t  %0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  \t  %0.5f, %0.5f, %0.5f,     \t  %0.5f, %0.5f, %0.5f,   %0.5f, %i,      %i,%i,%i    ",
+  sprintf(text, "%0.5f,   %0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  %0.5f,  \t  %0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  %0.5f,  \t  %0.5f, %0.5f, %0.5f,     \t  %0.5f, %0.5f, %0.5f,   %0.5f, %i,  %0.5f, %0.5f,      %i,%i,%i    ",
     
+    elapsed_time,
     sensor.estimate.x,
     sensor.estimate.vx,
     r2d*control.cd.u(0),
     r2d*sensor.data.roll,
     r2d*control.U_pos(0), 
+    sensor.data.gx,
     
     sensor.estimate.y,
     sensor.estimate.vy,
     r2d*control.cd.u(1),
     r2d*sensor.data.pitch, 
     r2d*control.U_pos(1),
+    sensor.data.gy,
     
     r2d*sensor.data.yaw,
     r2d*control.SP_hover_int(2),
@@ -359,6 +403,8 @@ void print_control_imu(void)
     sensor.estimate.vz,
     control.cd.Tm,
     control.act.ad.pwmedf,
+    control._gain_roll,
+    control._gain_pitch,
 
     // sensor.debug.x_int,
     // sensor.data.vx,

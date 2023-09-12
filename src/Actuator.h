@@ -58,7 +58,7 @@
 #define Y_P1 0.00
 #define Y_P2 31.48
 //#define Y_P3 1588
-#define Y_P3 1575
+#define Y_P3 1543
 
 //[-0.013683 6.2274 1133.2]
 

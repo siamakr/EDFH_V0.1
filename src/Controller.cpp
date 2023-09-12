@@ -26,7 +26,7 @@
         //Envoke Matricies on the function stack and initialize them
         Matrix<4,1> U = {0.00}; // Control Vector
         Matrix<12,1> error {0.00}; // State error vector
-        Matrix<4,12> K = K_int;
+        //Matrix<4,12> K = K_int;
         Matrix<12,1> REF = SP_hover_int;         //store desired setpoint (either by user or from Position Controller Output)
         Matrix<12,1> Xs = {0.00};     //State Vector
 
@@ -48,8 +48,11 @@
         // LIMIT(error(10), -1 * _max_int_def, _max_int_def);
         // LIMIT(error(11), -1 * _max_int_def, _max_int_def);
 
+        //Calculate new gains by gain scheduler
+        gain_schedule(error(0), error(1), error(3), error(4), error(6));
+
         //Run LQR Controller + full integral action
-        U = -K * error;
+        U = -K_int * error;
 
         //Update the EDF motor control signal with Vehicle weight
         U(3) += MASS * G;         //Normal Mode
@@ -125,14 +128,14 @@
     error = SP_pos - X_pos;
 
     // Rotate error to body (assuming hover state, roll = 0, pitch = 0)
-    // error(0) = error(0)*cos(yaw) + error(1)*sin(yaw);  // x
-    // error(1) = error(1)*cos(yaw) - error(0)*sin(yaw);  // y
-    // error(2) = error(2)*cos(yaw) + error(3)*sin(yaw);  // vx
-    // error(3) = error(3)*cos(yaw) - error(2)*sin(yaw);  // vy
+    error(0) = error(0)*cos(yaw) + error(1)*sin(yaw);  // x
+    error(1) = error(1)*cos(yaw) - error(0)*sin(yaw);  // y
+    error(2) = error(2)*cos(yaw) + error(3)*sin(yaw);  // vx
+    error(3) = error(3)*cos(yaw) - error(2)*sin(yaw);  // vy
 
     // Integral computation and limit
-    error_integral_x += error(0) * DT_SEC;
-    error_integral_y += error(1) * DT_SEC;
+    error_integral_x += error(0) * DT_USEC*10;
+    error_integral_y += error(1) * DT_USEC*10;
 
     LIMIT( error_integral_x, -0.35, 0.35 );
     LIMIT( error_integral_y, -0.35, 0.35 );
@@ -191,6 +194,26 @@
 
     }
 
+    void Controller::gain_schedule(float error_roll, float error_gx, float error_pitch, float error_gy, float error_altitude){
+        //-- roll 
+        const float slope_roll{(0.250 - 0.13)/(d2r*5.00f)};
+        _gain_roll = -slope_roll * abs(error_roll) + 0.10;
+        LIMIT(_gain_roll, 0.10f, 0.25f);
+        //-- pitch 
+        const float slope_pitch{(0.250 - 0.13)/(d2r*5.00f)};
+        _gain_pitch = -slope_pitch * abs(error_pitch) + 0.10;
+        LIMIT(_gain_pitch, 0.10f, 0.25f);
+
+        //-- gx
+        const float slope_gx{(0.15f - 0.075) / (0.200f)};
+        _gain_gx = -slope_gx * abs(error_gx) + 0.20;
+        LIMIT(_gain_gx, 0.10, 0.25);
+        //-- gy
+        const float slope_gy{(0.15f - 0.075) / (0.200f)};
+        _gain_gy = -slope_gy * abs(error_gy) + 0.200;
+        LIMIT(_gain_gy, 0.10, 0.25);
+        //-- altitude
+    }
 
 
 
