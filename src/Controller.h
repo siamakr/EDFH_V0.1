@@ -133,9 +133,9 @@ public:
     float _gain_gy{0.100};               //GY GAIN 
     volatile float _gain_gz{.0831};                  //GZ GAIN
 
-    volatile float _gain_z{5.10};                   //ALT VELOCITY
-    volatile float _gain_vz{3.6942};                  //ALTITUDE
-    volatile float _gain_z_int{0.00f};                  //ALTITUDE INTEGRAL GAIN
+    volatile float _gain_z{8.10};                   //ALT VELOCITY
+    volatile float _gain_vz{5.6942};                  //ALTITUDE
+    volatile float _gain_z_int{1.00f};                  //ALTITUDE INTEGRAL GAIN
 
     volatile float _gain_roll_int{0.5};              //ROLL INTEGRAL GAIN
     volatile float _gain_pitch_int{0.5};             //PITCH INTEGRAL GAIN       
@@ -145,7 +145,7 @@ public:
     volatile float _int_bound_alt{0.050f};
     volatile float _max_int_def{d2r*2.00f};
 
-    volatile float _alpha_servo{0.150};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
+    volatile float _alpha_servo{0.050};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
 
     float error_integral_x{0};
     float error_integral_y{0};
@@ -155,8 +155,8 @@ public:
     /* Matrix<2,6> K_pos = {     0.0000,  -0.1368,   0.0000,  -0.1744,   0.0000,  -0.0250,
                               0.1368,   0.0000,   0.1744,   0.0000,   0.0250,   0.0000,  }; */
 
-    Matrix<2,6> K_pos = {   0.0000,  -0.08031,   0.0000,  -0.2100,   0.0000,  -0.00000,
-                            -0.08031,   0.0000,   -0.2100,   0.0000,   -0.00000,   0.0000, };
+    Matrix<2,6> K_pos = {   0.0000,  -0.100031,   0.0000,  -0.1400,   0.0000,  -0.05000,
+                            0.100031,   0.0000,   0.1400,   0.0000,   0.05000,   0.0000, };
                             // x      // y      // vx     // vy     // xit   // yint
     // Matrix<2,6> K_pos = {   0.0000,  0.05031,   0.0000,  0.075000,   0.0000,  -0.00000,
     //                         -0.05031,   0.0000,   -0.075000,   0.0000,   0.00000,   0.0000, };

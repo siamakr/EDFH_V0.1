@@ -32,8 +32,8 @@
 
         //load state vecotr
         Xs = {r, p, y, gx, gy, gz, z, vz};
-        // REF(0) -= U_pos(0);
-        // REF(1) += U_pos(1);
+        REF(0) += U_pos(0);
+        REF(1) += U_pos(1);
         //calculate reference error
         error = Xs - REF;
 
@@ -49,7 +49,7 @@
         // LIMIT(error(11), -1 * _max_int_def, _max_int_def);
 
         //Calculate new gains by gain scheduler
-        gain_schedule(error(0), error(1), error(3), error(4), error(6));
+        //gain_schedule(error(0), error(1), error(3), error(4), error(6));
 
         //Run LQR Controller + full integral action
         U = -K_int * error;
@@ -74,9 +74,9 @@
         float delta_yy{asin(Ty/(Tm))};
        
         //Using alternate method
-        // U(0) = delta_xx;
-        // U(1) = delta_yy;
-        // U(3) = Tm;
+         U(0) = delta_xx;
+         U(1) = delta_yy;
+         U(3) = Tm;
 
         //convert desired Yaw torque into thrust force per yaw motor
         const float desired_yaw_force = ((U(2) / lrw) / 2) ;                    //dividing by 2 to split force between 2 yaw props
@@ -128,14 +128,14 @@
     error = SP_pos - X_pos;
 
     // Rotate error to body (assuming hover state, roll = 0, pitch = 0)
-    error(0) = error(0)*cos(yaw) + error(1)*sin(yaw);  // x
-    error(1) = error(1)*cos(yaw) - error(0)*sin(yaw);  // y
-    error(2) = error(2)*cos(yaw) + error(3)*sin(yaw);  // vx
-    error(3) = error(3)*cos(yaw) - error(2)*sin(yaw);  // vy
+    // error(0) = error(0)*cos(yaw) - error(1)*sin(yaw);  // x
+    // error(1) = error(1)*cos(yaw) - error(0)*sin(yaw);  // y
+    // error(2) = error(2)*cos(yaw) - error(3)*sin(yaw);  // vx
+    // error(3) = error(3)*cos(yaw) - error(2)*sin(yaw);  // vy
 
     // Integral computation and limit
-    error_integral_x += error(0) * DT_USEC*10;
-    error_integral_y += error(1) * DT_USEC*10;
+    error_integral_x += error(0) * DT_USEC*1;
+    error_integral_y += error(1) * DT_USEC*1;
 
     LIMIT( error_integral_x, -0.35, 0.35 );
     LIMIT( error_integral_y, -0.35, 0.35 );
@@ -196,22 +196,22 @@
 
     void Controller::gain_schedule(float error_roll, float error_gx, float error_pitch, float error_gy, float error_altitude){
         //-- roll 
-        const float slope_roll{(0.250 - 0.13)/(d2r*5.00f)};
-        _gain_roll = -slope_roll * abs(error_roll) + 0.10;
-        LIMIT(_gain_roll, 0.10f, 0.25f);
+        const float slope_roll{(0.250 - 0.13)/(d2r*2.00f)};
+        _gain_roll = -slope_roll * abs(error_roll) + 0.13;
+        LIMIT(_gain_roll, 0.15f, 0.25f);
         //-- pitch 
-        const float slope_pitch{(0.250 - 0.13)/(d2r*5.00f)};
-        _gain_pitch = -slope_pitch * abs(error_pitch) + 0.10;
-        LIMIT(_gain_pitch, 0.10f, 0.25f);
+        const float slope_pitch{(0.250 - 0.13)/(d2r*2.00f)};
+        _gain_pitch = -slope_pitch * abs(error_pitch) + 0.13;
+        LIMIT(_gain_pitch, 0.15f, 0.25f);
 
         //-- gx
-        const float slope_gx{(0.15f - 0.075) / (0.200f)};
-        _gain_gx = -slope_gx * abs(error_gx) + 0.20;
-        LIMIT(_gain_gx, 0.10, 0.25);
+        const float slope_gx{(0.19f - 0.075) / (0.200f)};
+        _gain_gx = -slope_gx * abs(error_gx) + 0.0750;
+        LIMIT(_gain_gx, 0.080, 0.12);
         //-- gy
-        const float slope_gy{(0.15f - 0.075) / (0.200f)};
-        _gain_gy = -slope_gy * abs(error_gy) + 0.200;
-        LIMIT(_gain_gy, 0.10, 0.25);
+        const float slope_gy{(0.19f - 0.075) / (0.200f)};
+        _gain_gy = -slope_gy * abs(error_gy) + 0.0750;
+        LIMIT(_gain_gy, 0.080, 0.12);
         //-- altitude
     }
 
