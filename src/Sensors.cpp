@@ -426,6 +426,7 @@ void Sensors::clamp(float &value, float min, float max){
         Serial.println(text);
     }
 
+
     void Sensors::print_fsm(void)
     {
         char text[250];

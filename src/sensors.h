@@ -181,8 +181,8 @@ public:
 
  
         //FILTER PARAMS
-    float _alpha_gyro{0.10};                //GYROSCOPE FILTER ALPHA
-    float _alpha_accel{0.050};               //ACCELEROMETER SIGNAL FILTER ALPHA 
+    const float _alpha_gyro{0.10};                //GYROSCOPE FILTER ALPHA
+    const float _alpha_accel{0.050};               //ACCELEROMETER SIGNAL FILTER ALPHA 
 
 
 

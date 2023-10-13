@@ -18,17 +18,17 @@ Controller control;
 
 //..... State Machine Vars .....// 
 //... Timing Vars ...//
-volatile float sensor_timer{0};
-volatile float print_timer{0.00f};
-volatile float estimator_timer{0.00f};
-volatile float pos_controller_timer{0.00f};
-volatile float mst{0.00f};       //Mission Start Timer
-volatile float init_timer{0.00f};
-volatile float elapsed_time{0.00f};
+static float sensor_timer{0};
+static float print_timer{0.00f};
+static float estimator_timer{0.00f};
+static float pos_controller_timer{0.00f};
+static float mst{0.00f};       //Mission Start Timer
+static float init_timer{0.00f};
+static float elapsed_time{0.00f};
 //... Flags ...//
-volatile bool is_calibrated{false};  
-volatile bool start_flag{false};
-volatile bool prime_start_flag{false};
+static bool is_calibrated{false};  
+static bool start_flag{false};
+static bool prime_start_flag{false};
 int count = 0;
 
 
@@ -52,14 +52,14 @@ void setup() {
   //--- Initialize control Actuators ---//
   //control.init();
    control.act.init_servos();
-   control.act.init_rw();
-   control.act.init_edf();
+   //control.act.init_rw();
+   //control.act.init_edf();
    control.act.zero_servos();
-   control.act.zero_rw();
+   //control.act.zero_rw();
   #endif
   //control.act.init_servos();
 
-    delay(200);
+    delay(5000);
   //--- Initialize Sensors ---//
     sensor.flow_init();
     sensor.lidar_init();
@@ -72,7 +72,8 @@ void setup() {
   //--- Initialize initial coniditions of flight and set state machine start ---//
 
   control.status = CONTROL_STATUS_IMU_CALIBRATION;
-  Serial.println("Priming start...");  
+  //Serial.println("testing begin...");  
+  Serial.println("roll,pitch,yaw,qi,qj,qk,qw,x,y,z,vx,vy,vz,linacc,gyroacc,quatacc"); 
 
   //init_timer = millis(); 
 }
@@ -90,7 +91,7 @@ void loop() {
       // control.act.edf_shutdown();
       // control.act.zero_servos();
       // control.act.zero_rw();
-      if(Serial.available() == true){     //wait for user input to start flight
+      //if(Serial.available() == true){     //wait for user input to start flight
         //start_flag = false;     //this will reset mst once edf priming is done 
         //--initialize all timers--//
           init_timer = micros();  //resets edf priming timer
@@ -103,7 +104,7 @@ void loop() {
           control.set_reference(SETPOINT_YAW, d2r*60);   
         //--jump to edf-priming state    
           control.status = CONTROL_STATUS_EDF_PRIMING;  //changes state to edf priming on next state
-      }
+      //}
     break;
     
     case CONTROL_STATUS_EDF_PRIMING:
@@ -113,6 +114,8 @@ void loop() {
         control.status = CONTROL_STATUS_EDF_PRIMING;
       }else{
         Serial.println("priming finished..."); 
+        Serial.println("testing begin..."); 
+        Serial.println("time,x,vx,u0,roll,roll_sp,gx,y,vy,u1,pitch,pitch_sp,gy,yaw,yaw_sp,u2,z,vz,tm,rollgain,pitchgain,gxgain,gygain,s0,s1,s2"); 
         control.status = CONTROL_STATUS_FLYING; 
       }
     break;
@@ -165,8 +168,8 @@ void loop() {
         //Serial.println("Now in wait mode..."); 
        //control.status = CONTROL_STATUS_STATIONARY;
        }if(count >= 10){
-        Serial.println("IMU calibration done..."); 
-        Serial.println("Now in wait mode..."); 
+       // Serial.println("+++"); 
+        Serial.println("calibration done..."); 
         control.status = CONTROL_STATUS_STATIONARY;
         }else{
           control.status = CONTROL_STATUS_IMU_CALIBRATION;
@@ -361,13 +364,15 @@ void step_response_state_machine(float step_interval_ms, float angle)
   //else 
  
   #ifndef SENSOR_ONLY
-    if(elapsed_time >= (step_interval_ms * 7) && sensor.estimate.z <= .150f)
+//    if(elapsed_time >= (step_interval_ms * 7) && sensor.estimate.z <= .150f)
+    if(elapsed_time >= (step_interval_ms * 7))
     {
 
       control.act.edf_shutdown();
       control.act.zero_servos();
       control.act.zero_rw();
       //while(1);
+      Serial.println("testing done..."); 
       control.status = CONTROL_STATUS_STATIONARY;
     }
   #endif
@@ -376,28 +381,28 @@ void step_response_state_machine(float step_interval_ms, float angle)
 
 }
 
-
+//Serial.println("time,x,vx,u0,roll,roll_sp,gx,y,vy,u1,pitch,pitch_sp,gy,yaw,yaw_sp,u2,z,vz,tm,rollgain,pitchgain,gxgain,gygain,s0,s1,s2"); 
 
 //TODO: This function should go in Controller!!!
 void print_control_imu(void)
 {
   char text[250];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
-  sprintf(text, "%0.5f,   %0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  %0.5f,  \t  %0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  %0.5f,  \t  %0.5f, %0.5f, %0.5f,     \t %0.5f, %0.5f,   %0.5f,  %0.5f, %0.5f,  %0.5f, %0.5f,      %i,%i,%i    ",
+  sprintf(text, "%0.6f,   %0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  %0.5f,  \t  %0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  %0.5f,  \t  %0.5f, %0.5f, %0.5f,     \t %0.5f, %0.5f,   %0.5f,  %0.5f, %0.5f,  %0.5f, %0.5f,      %i,%i,%i    ",
     
-    elapsed_time,
+    elapsed_time/1000000,
     sensor.estimate.x,
     sensor.estimate.vx,
     r2d*control.cd.u(0),
     r2d*sensor.data.roll,
-    r2d*control.U_pos(0), 
+    r2d*control.cd.ref0, 
     sensor.data.gx,
     
     sensor.estimate.y,
     sensor.estimate.vy,
     r2d*control.cd.u(1),
     r2d*sensor.data.pitch, 
-    r2d*control.U_pos(1),
+    r2d*control.cd.ref1,
     sensor.data.gy,
     
     r2d*sensor.data.yaw,

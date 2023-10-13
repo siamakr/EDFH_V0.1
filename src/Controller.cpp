@@ -34,6 +34,10 @@
         Xs = {r, p, y, gx, gy, gz, z, vz};
         REF(0) += U_pos(0);
         REF(1) += U_pos(1);
+
+        // store these values for serial write
+        cd.ref0 = REF(0);
+        cd.ref1 = REF(1);
         //calculate reference error
         error = Xs - REF;
 
@@ -80,7 +84,7 @@
 
         //convert desired Yaw torque into thrust force per yaw motor
         const float desired_yaw_force = ((U(2) / lrw) / 2) ;                    //dividing by 2 to split force between 2 yaw props
-        const float desired_yaw_grams{(desired_yaw_force/9.8) * 1000};
+        const float desired_yaw_grams{(desired_yaw_force/G) * 1000};
 
         //Feedforward
         // U(0) += U_pos(0) * _gain_ff_roll;

@@ -68,10 +68,21 @@
 // #define EDF_P2 14.69
 // #define EDF_P3 1167
 
-//Quadratic V2
-#define EDF_P1 -0.1409
-#define EDF_P2 20.42
-#define EDF_P3 1117
+//Quadratic V2 Mr.Madd
+//#define EDF_P1 -0.1409
+//#define EDF_P2 20.42
+//#define EDF_P3 1117
+
+//Linear V2 EPF
+// #define EDF_P1 0.00
+// #define EDF_P2 7.74
+// #define EDF_P3 1130
+
+//Quadratic V1 EPF
+// -0.0624 11.8330 1.0686e+03
+#define EDF_P1 -0.0624
+#define EDF_P2 11.8330
+#define EDF_P3 1069
 
 //Antiroll motor regression Coeffs (Quadratic)
 #define RW_P1_GRAMS -0.013683

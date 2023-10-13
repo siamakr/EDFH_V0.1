@@ -46,6 +46,7 @@ typedef struct
     float angle_x, angle_xx, angle_y, angle_yy, Tm, Tx, Ty, Tz, Tedf;
     float delta_x, delta_y, delta_xx, delta_yy;
     float trq_rw, trq_x, trq_y; 
+    float ref0,ref1;
     Matrix<8,1> e = {0.00f};
     Matrix<12,1> e_int = {0.00f};
     Matrix<4,1> u = {0.00f};
@@ -82,6 +83,7 @@ public:
     Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};    //Desired Reference
     Matrix<12,1> SP_hover_int = {0.00f,0.00f,0.00f,  0.00f,0.00f,0.00f,  0.0f,0.00f,0.00f,  0.00f,0.00f,0.00f};    //Desired Reference
     control_status_t status;
+
 
 
     Controller( void );
