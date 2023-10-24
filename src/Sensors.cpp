@@ -4,54 +4,54 @@
 
     }
 
-    void Sensors::init(void)
+void Sensors::init(void)
+{
+    lidar_init();
+    delay(100);
+    fsm_init();
+
+    //flow_init();
+}
+    //... GARMIN LIDAR functions end ...//
+void Sensors::fsm_init(void)
+{
+    //..... FSM305/BNO080 Init .....//
+    Serial.print("FSM Init start..."); 
+    //delay(300);
+
+    if (fsm.beginSPI(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin, 4000000) == false)
     {
-        lidar_init();
-        delay(100);
-        fsm_init();
-
-        //flow_init();
-    }
-        //... GARMIN LIDAR functions end ...//
-    void Sensors::fsm_init(void)
-    {
-        //..... FSM305/BNO080 Init .....//
-        Serial.print("FSM Init start..."); 
-        //delay(300);
-
-        if (fsm.beginSPI(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin, 4000000) == false)
-        {
-            Serial.println("BNO080 over SPI not detected. Are you sure you have all 6 connections? Freezing...");
-            while(1);
-        }
-
-        fsm.calibrateAll();
-        fsm.enableLinearAccelerometer(DT_MSEC);  // m/s^2 no gravity
-        fsm.enableRotationVector(DT_MSEC);  // quat
-        //fsm.enableGameRotationVector(DT_MSEC);
-        fsm.enableGyro(DT_MSEC);  // rad/s
-        //fsm.enableGyroIntegratedRotationVector(DT_MSEC);
-        //fsm.enableMagnetometer(DT_MSEC);  // cannot be enabled at the same time as RotationVector (will not produce data)
-        
-        Serial.println("FSM Init Finished..."); 
-        delay(300);
-        sample_fsm();
-        //save current position of yaw as the zero. 
-        yaw_origin = data.yaw;
+        Serial.println("BNO080 over SPI not detected. Are you sure you have all 6 connections? Freezing...");
+        while(1);
     }
 
-    void Sensors::lidar_init(void)
-    {   
-        Wire.begin();
-        delay(100);
-        // "2" = short-range, fast speed
-        // "0" = normal operation 
-        garmin.configure(0, LIDARLITE_ADDR_DEFAULT);
-        delay(200);
-    }
+    fsm.calibrateAll();
+    fsm.enableLinearAccelerometer(DT_MSEC);  // m/s^2 no gravity
+    fsm.enableRotationVector(DT_MSEC);  // quat
+    //fsm.enableGameRotationVector(DT_MSEC);
+    fsm.enableGyro(DT_MSEC);  // rad/s
+    //fsm.enableGyroIntegratedRotationVector(DT_MSEC);
+    //fsm.enableMagnetometer(DT_MSEC);  // cannot be enabled at the same time as RotationVector (will not produce data)
+    
+    Serial.println("FSM Init Finished..."); 
+    delay(300);
+    sample_fsm();
+    //save current position of yaw as the zero. 
+    yaw_origin = data.yaw;
+}
 
-    void Sensors::flow_init(void){
-    // Initiate flow sensor
+void Sensors::lidar_init(void)
+{   
+    Wire.begin();
+    delay(100);
+    // "2" = short-range, fast speed
+    // "0" = normal operation 
+    garmin.configure(0, LIDARLITE_ADDR_DEFAULT);
+    delay(200);
+}
+
+void Sensors::flow_init(void){
+// Initiate flow sensor
     if ( flow.begin() ) {
         flow.setLed(true);
         Serial.println("Flow connected successfully"); 
@@ -60,111 +60,111 @@
         while(1); 
     }
 
-    }
+}
 
     ///.......... FSM305/BNO080 FUNCTIONS ..........////
 
-    void Sensors::save_calibrate_fsm(void)
+void Sensors::save_calibrate_fsm(void)
+{
+    if(Serial.available())
     {
-        if(Serial.available())
+        byte incoming = Serial.read();
+
+        if(incoming == 's')
         {
-            byte incoming = Serial.read();
+            fsm.saveCalibration(); //Saves the current dynamic calibration data (DCD) to memory
+            fsm.requestCalibrationStatus(); //Sends command to get the latest calibration status
 
-            if(incoming == 's')
-            {
-                fsm.saveCalibration(); //Saves the current dynamic calibration data (DCD) to memory
-                fsm.requestCalibrationStatus(); //Sends command to get the latest calibration status
-
-                //Wait for calibration response, timeout if no response
-                int counter = 100;
-            
-                while(1)
-                {
-                    if(--counter == 0) break;
-                    if(fsm.dataAvailable() == true)
-                {
-                    //The IMU can report many different things. We must wait
-                    //for the ME Calibration Response Status byte to go to zero
-                    if(fsm.calibrationComplete() == true)
-                    {
-                        Serial.println("Calibration data successfully stored");
-                        delay(1000);
-                        break;
-                    }
-                }
-
-                delay(1);
-            }
-
-            if(counter == 0) Serial.println("Calibration data failed to store. Please try again.");
-
-            //fsm.endCalibration(); //Turns off all calibration
-            //In general, calibration should be left on at all times. The BNO080
-            //auto-calibrates and auto-records cal data roughly every 5 minutes
-            }
-        } 
+            //Wait for calibration response, timeout if no response
+            int counter = 100;
         
-    } 
+            while(1)
+            {
+                if(--counter == 0) break;
+                if(fsm.dataAvailable() == true)
+            {
+                //The IMU can report many different things. We must wait
+                //for the ME Calibration Response Status byte to go to zero
+                if(fsm.calibrationComplete() == true)
+                {
+                    Serial.println("Calibration data successfully stored");
+                    delay(1000);
+                    break;
+                }
+            }
 
-
-    void Sensors::sample_fsm(void)
-    {
-
-        if(fsm.dataAvailable() == true)
-        {
-            // switched x and y axes due to mounting orientation
-            save_calibrate_fsm();
-            //..... Sample IMU .....//
-            //... Linear Accel ...//
-            // fsm.getLinAccel(data.ay, data.ax, data.az, data.linAccuracy);
-
-            // debug.ax_nf = data.ax;
-            // debug.ay_nf = data.ay;
-            // debug.az_nf = data.az;
-
-
-            data.linAccuracy = fsm.getLinAccelAccuracy();
-            data.ay = IIR(fsm.getLinAccelX(), data.ay, _alpha_accel);
-            data.ax = IIR(fsm.getLinAccelY(), data.ax, _alpha_accel);
-            data.az = IIR(fsm.getLinAccelZ(), data.az, _alpha_accel);
-
-            //apply deadzone clamping 
-            // clamp(data.ay, -0.01, 0.01);
-            // clamp(data.ax, -0.01, 0.01);
-            // clamp(data.az, -0.02, 0.02);
-
-            //... Gyro ...//
-           // fsm.getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
-
-            // data.gx = fsm.getFastGyroX();
-            // data.gy = fsm.getFastGyroY();
-            // data.gz = fsm.getFastGyroZ();
-            data.gyroAccuracy = fsm.getGyroAccuracy();
-            data.gy = IIR(fsm.getGyroX(), data.gy, _alpha_gyro);
-            data.gx = IIR(fsm.getGyroY(), data.gx, _alpha_gyro);
-            data.gz = IIR(fsm.getGyroZ(), data.gz, _alpha_gyro);
-            
-            //... Rotation Vector ...//
-            fsm.getQuat(data.qi, data.qj, data.qk, data.qw, data.quatRadianAccuracy, data.quatAccuracy);
-
-            // data.qi = fsm.getQuatI();
-            // data.qj = fsm.getQuatJ();
-            // data.qk = fsm.getQuatK();
-            // data.qw = fsm.getQuatReal();
-            // data.quatAccuracy = fsm.getQuatAccuracy();
-            // data.quatRadianAccuracy = fsm.getQuatRadianAccuracy();
-
-
-            //... Euler Angle Representation ...//
-            data.pitch = fsm.getRoll() + d2r* 0.6578f;
-            data.roll = fsm.getPitch() + d2r* 1.3772;
-            data.yaw = fsm.getYaw();    
-            //data.yaw = rotate_yaw(yaw_raw);
-            //data.yaw = fsm.getYaw();
-
-            
+            delay(1);
         }
+
+        if(counter == 0) Serial.println("Calibration data failed to store. Please try again.");
+
+        //fsm.endCalibration(); //Turns off all calibration
+        //In general, calibration should be left on at all times. The BNO080
+        //auto-calibrates and auto-records cal data roughly every 5 minutes
+        }
+    } 
+    
+} 
+
+
+void Sensors::sample_fsm(void)
+{
+
+    if(fsm.dataAvailable() == true)
+    {
+        // switched x and y axes due to mounting orientation
+        save_calibrate_fsm();
+        //..... Sample IMU .....//
+        //... Linear Accel ...//
+        // fsm.getLinAccel(data.ay, data.ax, data.az, data.linAccuracy);
+
+        // debug.ax_nf = data.ax;
+        // debug.ay_nf = data.ay;
+        // debug.az_nf = data.az;
+
+
+        data.linAccuracy = fsm.getLinAccelAccuracy();
+        data.ay = IIR(fsm.getLinAccelX(), data.ay, _alpha_accel);
+        data.ax = IIR(fsm.getLinAccelY(), data.ax, _alpha_accel);
+        data.az = IIR(fsm.getLinAccelZ(), data.az, _alpha_accel);
+
+        //apply deadzone clamping 
+        // clamp(data.ay, -0.01, 0.01);
+        // clamp(data.ax, -0.01, 0.01);
+        // clamp(data.az, -0.02, 0.02);
+
+        //... Gyro ...//
+        // fsm.getGyro(data.gx, data.gy, data.gz, data.gyroAccuracy);
+
+        // data.gx = fsm.getFastGyroX();
+        // data.gy = fsm.getFastGyroY();
+        // data.gz = fsm.getFastGyroZ();
+        data.gyroAccuracy = fsm.getGyroAccuracy();
+        data.gy = IIR(fsm.getGyroX(), data.gy, _alpha_gyro);
+        data.gx = IIR(fsm.getGyroY(), data.gx, _alpha_gyro);
+        data.gz = IIR(fsm.getGyroZ(), data.gz, _alpha_gyro);
+        
+        //... Rotation Vector ...//
+        fsm.getQuat(data.qi, data.qj, data.qk, data.qw, data.quatRadianAccuracy, data.quatAccuracy);
+
+        // data.qi = fsm.getQuatI();
+        // data.qj = fsm.getQuatJ();
+        // data.qk = fsm.getQuatK();
+        // data.qw = fsm.getQuatReal();
+        // data.quatAccuracy = fsm.getQuatAccuracy();
+        // data.quatRadianAccuracy = fsm.getQuatRadianAccuracy();
+
+
+        //... Euler Angle Representation ...//
+        data.pitch = fsm.getRoll() + d2r* 0.6578f;
+        data.roll = fsm.getPitch() + d2r* 1.3772;
+        data.yaw = fsm.getYaw();    
+        //data.yaw = rotate_yaw(yaw_raw);
+        //data.yaw = fsm.getYaw();
+
+        
     }
+}
 
     //... FSM305 Functions End ...//
     

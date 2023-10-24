@@ -56,8 +56,7 @@ typedef struct{
     float xpre_vx, xpre_vy, xpre_vz, xpre_z;        //the predicted values from estimator (prior to estimation step)
 }debug_t;
 
-typedef struct
-{
+typedef struct{
     float roll, pitch, yaw;
     float gx, gy, gz;
     float ax, ay, az;
@@ -79,25 +78,15 @@ typedef struct
         uint8_t lidar   : 1;
         uint8_t pos     : 1;
     } status;
-    
 } fsm_data_t;
 
-typedef struct
-{
+typedef struct{
     float x, y, z;
     float vx, vy, vz; 
-
 } estimator_data_t;
 
-
-
 //...... Class Definition .....//
-class Sensors
-{    
-    //..... Object Definition .....//
-
-
-
+class Sensors{    
 public:
     uint8_t cspin = 29;
     fsm_data_t data;
@@ -184,65 +173,29 @@ public:
     const float _alpha_gyro{0.10};                //GYROSCOPE FILTER ALPHA
     const float _alpha_accel{0.050};               //ACCELEROMETER SIGNAL FILTER ALPHA 
 
-
-
-
-
-    
     Sensors(void);
-
     void init(void);
-
     void fsm_init(void);
-
     void lidar_init(void);
-
     void flow_init(void);
-
     void save_calibrate_fsm(void);
- 
     void sample_fsm(void);
-
     void sample_lidar(void);
-
     void sample_flow(void);
-
     void run_estimator(void);
-
     void rotate_to_world( float * vector );
-
     void set_origin(void);
-    
     void update_pos( float x, float y );
-
     float rotate_yaw(float yaw);
-
     void clamp(float &value, float min, float max);
-    
     float IIR(float newSample, float prevOutput, float alpha);
-
     void print_debug(void);
-
     void print_imu(void);
-
     void print_fsm(void);
-
     void print_estimator(void);
-
-
-
-
 
 private:
 
 };
-
-
-
-
-
-
-
-
 
 #endif

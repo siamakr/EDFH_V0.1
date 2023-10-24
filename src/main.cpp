@@ -2,9 +2,6 @@
 #include "Sensors.h"
 #include "Controller.h"
 
-
-
-
 #define STATEMACHINE
 //#define SENSOR_ONLY 
 //#define QUICKTESTENV
@@ -13,14 +10,11 @@
 Sensors sensor; 
 Controller control; 
 
-
-
-
 //..... State Machine Vars .....// 
 //... Timing Vars ...//
 static float sensor_timer{0};
 static float print_timer{0.00f};
-static float estimator_timer{0.00f};
+static float flow_timer{0.00f};
 static float pos_controller_timer{0.00f};
 static float mst{0.00f};       //Mission Start Timer
 static float init_timer{0.00f};
@@ -47,7 +41,7 @@ void user_read_float(float & value, String message);
 void setup() {
 
   Serial.begin(115200);
-  
+  control.init();
   #ifndef SENSOR_ONLY
   //--- Initialize control Actuators ---//
   //control.init();
@@ -59,7 +53,6 @@ void setup() {
   #endif
   //control.act.init_servos();
 
-    delay(5000);
   //--- Initialize Sensors ---//
     sensor.flow_init();
     sensor.lidar_init();
@@ -68,7 +61,7 @@ void setup() {
 
   //--- Initialize initial coniditions of flight and set state machine start ---//
     control.set_reference(SETPOINT_Z, 0.400f);
-    control.set_reference(SETPOINT_YAW, d2r*1.00);
+    control.set_reference(SETPOINT_YAW, d2r*60.00);
   //--- Initialize initial coniditions of flight and set state machine start ---//
 
   control.status = CONTROL_STATUS_IMU_CALIBRATION;
@@ -85,36 +78,31 @@ void loop() {
 
   //--- State Machine ---//
   switch (control.status){
-
-    //Default state
     case CONTROL_STATUS_STATIONARY:
-      // control.act.edf_shutdown();
-      // control.act.zero_servos();
-      // control.act.zero_rw();
-      //if(Serial.available() == true){     //wait for user input to start flight
-        //start_flag = false;     //this will reset mst once edf priming is done 
-        //--initialize all timers--//
+      if(Serial.available() == true){     //wait for user input to start flight
+        //Init all timers
           init_timer = micros();  //resets edf priming timer
           mst = micros();         //mission start timer
           sensor_timer = micros();
-          estimator_timer = micros();
+          flow_timer = micros();
           print_timer = micros();
-        //--initial condition setpoints
+
+        //Set init set-points
           control.set_reference(SETPOINT_Z, 0.400f);
-          control.set_reference(SETPOINT_YAW, d2r*60);   
-        //--jump to edf-priming state    
+          control.set_reference(SETPOINT_YAW, d2r*60); 
+
+        //Change state   
           control.status = CONTROL_STATUS_EDF_PRIMING;  //changes state to edf priming on next state
-      //}
+      }
     break;
     
     case CONTROL_STATUS_EDF_PRIMING:
-      control.act.edf.writeMicroseconds(1350);
-
+      control.act.edf.writeMicroseconds(1250);
       if(micros() - init_timer <= 6000000){          //hold EDF priming PWM signal for 6 seconds 
         control.status = CONTROL_STATUS_EDF_PRIMING;
       }else{
         Serial.println("priming finished..."); 
-        Serial.println("testing begin..."); 
+        Serial.println("testing begin...");     //Tells Python app to begin storing data
         Serial.println("time,x,vx,u0,roll,roll_sp,gx,y,vy,u1,pitch,pitch_sp,gy,yaw,yaw_sp,u2,z,vz,tm,rollgain,pitchgain,gxgain,gygain,s0,s1,s2"); 
         control.status = CONTROL_STATUS_FLYING; 
       }
@@ -186,42 +174,25 @@ void loop() {
 
 
 void run_hover_program(void){
-
-    if(micros() - pos_controller_timer >= DT_USEC*1){
-    pos_controller_timer = micros();
-            //run position controller to get roll_desired, pitch_desired vals
-    control.lqr_pos(sensor.estimate.vx, 
-                    sensor.estimate.vy, 
-                    sensor.estimate.x, 
-                    sensor.estimate.y, 
-                    sensor.data.yaw);
-
-    //take output of pos controller and set as reference for attitude controller
-      // control.set_reference(SETPOINT_ROLL, control.U_pos(0));
-      // control.set_reference(SETPOINT_PITCH, control.U_pos(1));
-
-  }
+    //Sample IMU as fast as possible
     //..... Sensor Timer .....//
-    if(micros() - sensor_timer >= DT_USEC){
-      //update timer
+    if(micros() - sensor_timer >= DT_USEC){       //DT_USEC = 5µs
       sensor_timer = micros();    //update timer
-      //sample lidar
       sensor.sample_lidar();      //read lidar 
-      //execute estimator
-      sensor.run_estimator();
+      sensor.run_estimator();     //execute estimator
 
-      // //run position controller to get roll_desired, pitch_desired vals
-      // control.lqr_pos(sensor.estimate.vx, 
-      //                 sensor.estimate.vy, 
-      //                 sensor.estimate.x, 
-      //                 sensor.estimate.y, 
-      //                 sensor.data.yaw);
+      //run position controller to get roll_desired, pitch_desired vals
+      control.lqr_pos(sensor.estimate.vx, 
+                      sensor.estimate.vy, 
+                      sensor.estimate.x, 
+                      sensor.estimate.y, 
+                      sensor.data.yaw);
 
-      // //take output of pos controller and set as reference for attitude controller
-      //  control.set_reference(SETPOINT_ROLL, control.U_pos(0));
-      //  control.set_reference(SETPOINT_PITCH, control.U_pos(1));
+      //take output of pos controller and set as reference for attitude controller
+       control.set_reference(SETPOINT_ROLL, control.U_pos(0));
+       control.set_reference(SETPOINT_PITCH, control.U_pos(1));
 
-      //runn attitude controller + control allocator
+      //run attitude controller + control allocator
       control.lqr(sensor.data.roll, 
                     sensor.data.pitch, 
                     sensor.data.yaw, 
@@ -232,27 +203,21 @@ void run_hover_program(void){
                     sensor.estimate.vz);
 
     }
-
-    //..... Estimator Timer .....//   
-    if(micros() - estimator_timer >= DT_USEC){
-      estimator_timer = micros();
+    //..... Optical Flow Timer .....//   
+    if(micros() - flow_timer >= DT_USEC*2){      //run at half speed
+      flow_timer = micros();
       sensor.sample_flow();       //read flow
-      //control.actuate();
-      //control.actuate_servos();
-      //control.actuate_edf()
     }
 
-
-
     //..... Print Timer .....//
-    if(micros() - print_timer >= (DT_USEC * 2)  ){
+    if(micros() - print_timer >= (DT_USEC*4)  ){  //print at 1/4 speed to not bog up Serial
       print_timer = micros();
       //control.print_debug();
       print_control_imu();
       //print_control_imu_estimater();
       //print_controller();
       //sensor.print_estimator();
-      // print_estimator_main();
+      //print_estimator_main();
       //flow_debugger();
 
     }
@@ -364,8 +329,8 @@ void step_response_state_machine(float step_interval_ms, float angle)
   //else 
  
   #ifndef SENSOR_ONLY
-//    if(elapsed_time >= (step_interval_ms * 7) && sensor.estimate.z <= .150f)
-    if(elapsed_time >= (step_interval_ms * 7))
+    if(elapsed_time >= (step_interval_ms * 7) && sensor.estimate.z <= .150f)
+   // if(elapsed_time >= (step_interval_ms * 7))
     {
 
       control.act.edf_shutdown();
@@ -639,3 +604,11 @@ void loop(){
 
 }
 #endif
+
+      //control.print_debug();
+     // print_control_imu();
+      //print_control_imu_estimater();
+      //print_controller();
+      //sensor.print_estimator();
+      // print_estimator_main();
+      //flow_debugger();

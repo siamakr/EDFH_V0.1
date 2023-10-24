@@ -52,13 +52,13 @@
 // MKS Servo TVC Regression Coeffs
 #define X_P1 0.00
 #define X_P2 -37.94
-#define X_P3 1297
-//#define X_P3 1390
+//#define X_P3 1297
+#define X_P3 1320
 
 #define Y_P1 0.00
 #define Y_P2 31.48
-//#define Y_P3 1588
-#define Y_P3 1543
+#define Y_P3 1600
+//#define Y_P3 1543
 
 //[-0.013683 6.2274 1133.2]
 
@@ -74,15 +74,15 @@
 //#define EDF_P3 1117
 
 //Linear V2 EPF
-// #define EDF_P1 0.00
-// #define EDF_P2 7.74
-// #define EDF_P3 1130
+#define EDF_P1 0.00
+#define EDF_P2 12.74
+#define EDF_P3 1132
 
 //Quadratic V1 EPF
 // -0.0624 11.8330 1.0686e+03
-#define EDF_P1 -0.0624
-#define EDF_P2 11.8330
-#define EDF_P3 1069
+// #define EDF_P1 -0.0694
+// #define EDF_P2 12.1330
+// #define EDF_P3 1069
 
 //Antiroll motor regression Coeffs (Quadratic)
 #define RW_P1_GRAMS -0.013683
@@ -132,13 +132,10 @@ public:
     void init_servos(void);
     void init_edf(void);
     void init_rw(void);
-
-
     void zero_servos();
     void zero_rw(void);
     void edf_shutdown(void);
- 
-    void prime_edf(void);
+     void prime_edf(void);
     void prime_edf(int delay_time_ms);
     bool prime_edf(int delay_time_ms, float start_timer);
 
@@ -150,22 +147,11 @@ public:
     void writeEDF(float Ft);
     void writeEDF(int pwm);
     void writeRW(float grams);
-
     bool servo_dance(float start_angle, int delay_time_ms);
-
     void LIMIT(int & value, int min, int max);
 
 private:
 
-
-
-
 };
-
-
-
-
-
-
 
 #endif

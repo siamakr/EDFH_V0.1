@@ -10,19 +10,22 @@
 #include <BasicLinearAlgebra.h>
 #include <stdint.h>
 
+#define d2r (PI/180.00f)
+#define r2d (180.00f/PI)
 
 //// Vehicle Specs + General Constants
 #define COM_TO_TVC 0.1335                                       //m
 #define ledf .050                                               //m
-#define lrw 0.150                                               //m
+#define lrw 0.10                                               //m
 #define MASS_EDF .700                                           //Kg
-#define MASS 2.295                                              //Kg
+//#define MASS 3.273                                              //Kg
+#define MASS 3.173                                              //Kg
 //#define MASS 2.9                                              //Kg
 #define MAX_TVC_DEFLECTION_DEG 4.00f                           //deg
 #define MAX_TVC_DEFLECTION_RAD (d2r * MAX_TVC_DEFLECTION_DEG)   //rad
-#define MAX_YAW_TORQUE 0.21
-#define MIN_THRUST 10.00                                        //Newtons
-#define MAX_THRUST 31.00                                        //Newtons
+#define MAX_YAW_TORQUE 0.61
+#define MIN_THRUST 17.00                                        //Newtons
+#define MAX_THRUST 45.00                                        //Newtons
 #define G 9.807                                                  //m/s^2
 
 
@@ -34,11 +37,6 @@
 #define RW_JZZ 0.00174245f      //MASS-MOMENT-OF-INERTIA OF REACTION WHEEL
 
 using namespace BLA;
-
-//..... Defines .....//
-//#define DT_MSEC 5.00f
-#define d2r (PI/180.00f)
-#define r2d (180.00f/PI)
 
 typedef struct 
 {
@@ -55,7 +53,7 @@ typedef struct
 }controller_data_t;
 
 typedef enum{
-    CONTROL_STATUS_STATIONARY = 0,
+    CONTROL_STATUS_STATIONARY=0,
     CONTROL_STATUS_EDF_PRIMING,
     CONTROL_STATUS_FLYING,
     CONTROL_STATUS_LIFTOFF,
@@ -64,7 +62,7 @@ typedef enum{
 } control_status_t; 
 
 typedef enum{
-    SETPOINT_X = 0,
+    SETPOINT_X=0,
     SETPOINT_Y,
     SETPOINT_Z,
     SETPOINT_ROLL,
@@ -74,80 +72,66 @@ typedef enum{
 
 
 //...... Class Definition .....//
-class Controller
-{
+class Controller{
 public:
+    // Objects
     Actuator act;
     controller_data_t cd;
     control_setpoint_t setpoint; 
-    Matrix<8,1> SP_hover = {0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00};    //Desired Reference
-    Matrix<12,1> SP_hover_int = {0.00f,0.00f,0.00f,  0.00f,0.00f,0.00f,  0.0f,0.00f,0.00f,  0.00f,0.00f,0.00f};    //Desired Reference
     control_status_t status;
-
-
-
-    Controller( void );
+    Matrix<8,1> SP_hover = {0.00};    //Desired Reference
+    Matrix<12,1> SP_hover_int = {0.00f};    //Desired Reference
     
-    void init(void);
-
-    void lqr(float r, float p, float y, float gx, float gy, float gz, float z, float vz);
-    
-
-    void lqr_pos( float x, float y, float vx, float vy, float yaw );
-
-    void actuate( float angle_x_rad, float angle_y_rad, float thrust_force_newton );
-
-    void actuate_servos(float angle_x_rad, float angle_y_rad);
-
-    void actuate_edf( float thrust_force_newton );
-
-    void set_reference(control_setpoint_t cs, float value);
-
-    void gain_schedule(float error_roll, float error_gx, float error_pitch, float error_gy, float error_altitude);
-
-    void print_debug(void);
-
     // Position state vector
     Matrix<6,1> X_pos = {0,0,0,0,0,0};
-
-    // Setpoints for position controller (x, y, vx, vy, xint, yint)
     Matrix<6,1> SP_pos = {0,0,0,0,0,0};
-
-    // Output from position controller
     Matrix<2,1> U_pos = {0,0};
 
-        float limit(float value, float min, float max);
-    void LIMIT(float & value, float min, float max);
+    Controller( void );
+    void init(void);
+    void lqr(float r, float p, float y, float gx, float gy, float gz, float z, float vz);
+    void lqr_pos( float x, float y, float vx, float vy, float yaw );
+    void actuate( float angle_x_rad, float angle_y_rad, float thrust_force_newton );
+    void actuate_servos(float angle_x_rad, float angle_y_rad);
+    void actuate_edf( float thrust_force_newton );
+    void set_reference(control_setpoint_t cs, float value);
+    void gain_schedule(float error_roll, float error_gx, float error_pitch, float error_gy, float error_altitude);
+    void print_debug(void);
 
+
+
+    float limit(float value, float min, float max);
+    void LIMIT(float & value, float min, float max);
+    void IIR(float & new_sample, float prev_output, float alpha);
     float IIRF(float newSample, float prevOutput, float alpha);
 
-    void IIR(float & new_sample, float prev_output, float alpha);
+    
     //Feedforward gains
-    volatile float _gain_ff_roll{0.000};
-    volatile float _gain_ff_pitch{0.00};
+    float _gain_ff_roll{0.000};
+    float _gain_ff_pitch{0.00};
     //LQR Gains 
     //Use these for gain scheduling //
-     float _gain_roll{0.20};               //ROLL GAIN
-    float  _gain_pitch{0.20};          //PITCH GAIN
-    volatile float _gain_yaw{.2000};                 //YAW GAIN
+    float _gain_roll{0.100};               //ROLL GAIN
+    float  _gain_pitch{0.100};          //PITCH GAIN
+    float _gain_yaw{-0.1000};                 //YAW GAIN
 
-    float _gain_gx{0.100};                 //GX GAIN
-    float _gain_gy{0.100};               //GY GAIN 
-    volatile float _gain_gz{.0831};                  //GZ GAIN
+    float _gain_gx{0.0600};                 //GX GAIN
+    float _gain_gy{0.0600};               //GY GAIN 
+    float _gain_gz{-0.1931};                  //GZ GAIN
 
-    volatile float _gain_z{8.10};                   //ALT VELOCITY
-    volatile float _gain_vz{5.6942};                  //ALTITUDE
-    volatile float _gain_z_int{1.00f};                  //ALTITUDE INTEGRAL GAIN
+    float _gain_z{10.10};                   //ALT VELOCITY
+    float _gain_vz{8.6942};                  //ALTITUDE
+    float _gain_z_int{1.00f};                  //ALTITUDE INTEGRAL GAIN
 
-    volatile float _gain_roll_int{0.5};              //ROLL INTEGRAL GAIN
-    volatile float _gain_pitch_int{0.5};             //PITCH INTEGRAL GAIN       
-    volatile float _gain_yaw_int{-.0001};               //YAW INTEGRAL GAIN
+    float _gain_roll_int{0.5};              //ROLL INTEGRAL GAIN
+    float _gain_pitch_int{0.5};             //PITCH INTEGRAL GAIN       
+    float _gain_yaw_int{-.0001};               //YAW INTEGRAL GAIN
 
-    volatile float _int_bound_att{d2r * 2.00f};
-    volatile float _int_bound_alt{0.050f};
-    volatile float _max_int_def{d2r*2.00f};
+    float _int_bound_att{d2r * 2.00f};
+    float _int_bound_alt{0.050f};
+    float _max_int_def{d2r*2.00f};
 
-    volatile float _alpha_servo{0.050};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
+    float _alpha_servo{0.050};               //SERVO ACTUATOR SIGNAL FILTER ALPHA 
 
     float error_integral_x{0};
     float error_integral_y{0};
@@ -157,9 +141,12 @@ public:
     /* Matrix<2,6> K_pos = {     0.0000,  -0.1368,   0.0000,  -0.1744,   0.0000,  -0.0250,
                               0.1368,   0.0000,   0.1744,   0.0000,   0.0250,   0.0000,  }; */
 
+
     Matrix<2,6> K_pos = {   0.0000,  -0.100031,   0.0000,  -0.1400,   0.0000,  -0.05000,
                             0.100031,   0.0000,   0.1400,   0.0000,   0.05000,   0.0000, };
-                            // x      // y      // vx     // vy     // xit   // yint
+                            // x      // y      // vx     // vy     // xint   // yint
+
+
     // Matrix<2,6> K_pos = {   0.0000,  0.05031,   0.0000,  0.075000,   0.0000,  -0.00000,
     //                         -0.05031,   0.0000,   -0.075000,   0.0000,   0.00000,   0.0000, };
     //                         // x      // y      // vx     // vy     // xit   // yint
@@ -193,11 +180,8 @@ public:
     //These are debug matricies to use its matrix print function
     Matrix<20> debug ;
 
-
 private:
 
-
 };
-
 
 #endif
