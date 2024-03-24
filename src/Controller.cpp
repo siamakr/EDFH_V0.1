@@ -1,28 +1,21 @@
-
 #include "Controller.h"
 #include "Sensors.h"
 
 
-Controller::Controller( void )
-{
+Controller::Controller( void ){
     
 }
 
-void Controller::init(void)
-{
+void Controller::init(void){
     //Initialize/zero all actuators
     act.init_servos();
     act.init_rw();
     act.init_edf();
     act.zero_servos();
     act.zero_rw();
-    
-    
 }
 
-
-void Controller::lqr(float r, float p, float y, float gx, float gy, float gz, float z, float vz)
-{
+void Controller::lqr(float r, float p, float y, float gx, float gy, float gz, float z, float vz){
     //Envoke Matricies on the function stack and initialize them
     Matrix<4,1> U = {0.00}; // Control Vector
     Matrix<12,1> error {0.00}; // State error vector
@@ -31,7 +24,7 @@ void Controller::lqr(float r, float p, float y, float gx, float gy, float gz, fl
     Matrix<12,1> Xs = {0.00};     //State Vector
 
     //load state vecotr
-    Xs = {r, p, y, gx, gy, gz, z, vz};
+    Xs = {r, p, -y, gx, gy, -gz, z, vz};
     REF(0) += U_pos(0);
     REF(1) += U_pos(1);
 
@@ -41,19 +34,10 @@ void Controller::lqr(float r, float p, float y, float gx, float gy, float gz, fl
     //calculate reference error
     error = Xs - REF;
 
-    // //altitude integral action 
-        error(8)  = ( ( error(6) >= (-1 * _int_bound_alt) ) && ( error(6) <= _int_bound_alt ) ) ? (cd.e_int(8) +  (error(6) * DT_SEC ) ) : 0.00f;       
-    // //attitude integral actions
-    // error(9)  = ( ( error(1) >= (-1 * _int_bound_att) ) && ( error(1) <= _int_bound_att ) ) ? cd.u(9) + ( _gain_roll_int  * error(1) * DT_SEC) : 0.00f;       
-    // error(10) = ( ( error(2) >= (-1 * _int_bound_att) ) && ( error(2) <= _int_bound_att ) ) ? cd.u(10) + ( _gain_pitch_int * error(2) * DT_SEC) : 0.00f;       
-    // error(11) = ( ( error(3) >= (-1 * _int_bound_att) ) && ( error(3) <= _int_bound_att ) ) ? cd.u(11) + ( _gain_yaw_int   * error(3) * DT_SEC) : 0.00f;  
+    //altitude integral action 
+    error(8)  = ( ( error(6) >= (-1 * _int_bound_alt) ) && ( error(6) <= _int_bound_alt ) ) ? (cd.e_int(8) +  (error(6) * DT_SEC ) ) : 0.00f;       
 
-        LIMIT(error(8) , -1 * _int_bound_alt, _int_bound_alt);
-    // LIMIT(error(10), -1 * _max_int_def, _max_int_def);
-    // LIMIT(error(11), -1 * _max_int_def, _max_int_def);
-
-    //Calculate new gains by gain scheduler
-    //gain_schedule(error(0), error(1), error(3), error(4), error(6));
+    LIMIT(error(8) , -1 * _int_bound_alt, _int_bound_alt);
 
     //Run LQR Controller + full integral action
     U = -K_int * error;
@@ -115,9 +99,6 @@ void Controller::lqr(float r, float p, float y, float gx, float gy, float gz, fl
     // cd.u(1) = delta_yy;
     cd.u = U;
     cd.Tm = Tm;
-
-
-
 }
 
 void Controller::lqr_pos( float x, float y, float vx, float vy, float yaw ){
@@ -147,8 +128,7 @@ void Controller::lqr_pos( float x, float y, float vx, float vy, float yaw ){
     //This is now done inside Main.cpp
 }
 
-void Controller::actuate( float angle_x_rad, float angle_y_rad, float thrust_force_newton )
-{
+void Controller::actuate( float angle_x_rad, float angle_y_rad, float thrust_force_newton ){
     //angles are switched due to calibration imu axis change, will change this
     //in the polynomial regression definition of the servo angles to tvc angle
     
@@ -157,14 +137,12 @@ void Controller::actuate( float angle_x_rad, float angle_y_rad, float thrust_for
     act.writeEDF((float) thrust_force_newton);
 }
 
-void Controller::actuate_servos(float angle_x_rad, float angle_y_rad)
-{
+void Controller::actuate_servos(float angle_x_rad, float angle_y_rad){
     act.writeXservo((float)  angle_x_rad);
     act.writeYservo((float)  angle_y_rad);
 }
 
-void Controller::actuate_edf(float thrust_force_newton)
-{
+void Controller::actuate_edf(float thrust_force_newton){
     act.writeEDF((float) thrust_force_newton);
 }
 
@@ -205,26 +183,21 @@ void Controller::gain_schedule(float error_roll, float error_gx, float error_pit
 
 
 float Controller::limit(float value, float min, float max){
-
     return value <= min ? min : (value >= max ? max : value); 
 }
 
 void Controller::LIMIT(float & value, float min, float max ){
-
     value = ( (value <= min) ? min : (value >= max ? max : value) );
 }
 
 float Controller::IIRF(float newSample, float prevOutput, float alpha){
-
     return ( ( (1.00f - alpha ) * newSample ) + ( alpha * prevOutput ) );
 }
 
 void Controller::IIR(float & new_sample, float prev_output, float alpha){
-
     new_sample = ( ( (1.00f - alpha ) * new_sample ) + ( alpha * prev_output ) );
 }
 
-void Controller::print_debug(void){
-    
+void Controller::print_debug(void){  
     Serial << debug << "\n" ;
 }

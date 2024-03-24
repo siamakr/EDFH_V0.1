@@ -45,10 +45,10 @@ void setup() {
   #ifndef SENSOR_ONLY
   //--- Initialize control Actuators ---//
   //control.init();
-   control.act.init_servos();
+   //control.act.init_servos();
    //control.act.init_rw();
    //control.act.init_edf();
-   control.act.zero_servos();
+   //control.act.zero_servos();
    //control.act.zero_rw();
   #endif
   //control.act.init_servos();
@@ -60,7 +60,7 @@ void setup() {
   //--- Initialize Sensors ---//
 
   //--- Initialize initial coniditions of flight and set state machine start ---//
-    control.set_reference(SETPOINT_Z, 0.400f);
+    control.set_reference(SETPOINT_Z, 0.500f);
     control.set_reference(SETPOINT_YAW, d2r*60.00);
   //--- Initialize initial coniditions of flight and set state machine start ---//
 
@@ -72,10 +72,8 @@ void setup() {
 }
 
 void loop() {
-  
   // Sample FSM as fast as possible since using SPI (Doesn't like "delay()" function too much)
   sensor.sample_fsm();
-
   //--- State Machine ---//
   switch (control.status){
     case CONTROL_STATUS_STATIONARY:
@@ -109,41 +107,38 @@ void loop() {
     break;
 
     case CONTROL_STATUS_LIFTOFF:
-      control._gain_z = 0.10f;
-      control._gain_z_int = 2.00f;
+      // control._gain_z = 0.10f;
+      // control._gain_z_int = 2.00f;
+
       // if(sensor.estimate.z > 0.0 && sensor.estimate.z < 0.38){
       //   control._gain_roll = .43f;
       //   control._gain_gx = 0.08f;
       // }
       run_hover_program();
       step_response_state_machine(2500000, 3.00f);
-      if(sensor.estimate.z >= 0.380f) control.status = CONTROL_STATUS_FLYING;
+      if(sensor.estimate.z >= 0.380f){ 
+        control.status = CONTROL_STATUS_FLYING;
+      }
     break;
 
     case CONTROL_STATUS_FLYING:
-      control._gain_z = 7.100f;
-      control._gain_vz = 5.6942f;
-      control._gain_z_int = 7.0f;
-      // control._gain_roll = .16f;
-      // control._gain_gx = 0.10f;
+      // control._gain_z = 7.100f;
+      // control._gain_vz = 5.6942f;
+      // control._gain_z_int = 7.0f;
+
       run_hover_program();
       step_response_state_machine(2500000, 3.00f);
-  
     break;
     
     case CONTROL_STATUS_LANDING:
-    //TODO: Change params for landing
-       control._gain_z = 0.00f;
-      // control._gain_vz = 2.600f;
-       control._gain_z_int = 3.500f;
-      // control._gain_roll = .11f;
-      // control._gain_gx = 0.0814f;
+      // control._gain_z = 0.00f;
+      // control._gain_z_int = 3.500f;
+
       run_hover_program();
       step_response_state_machine(2500000, 3.00f);
     break;
 
     case CONTROL_STATUS_IMU_CALIBRATION:
-
       if(micros() - print_timer >= (DT_USEC * 20)  ){       //must use this type of timer for delays 
         print_timer = micros();
         sensor.print_fsm();
@@ -162,71 +157,66 @@ void loop() {
         }else{
           control.status = CONTROL_STATUS_IMU_CALIBRATION;
         }
-       
     break;
     
     default:
       control.status = CONTROL_STATUS_STATIONARY;
     break;
   }
-
 }
-
 
 void run_hover_program(void){
-    //Sample IMU as fast as possible
-    //..... Sensor Timer .....//
-    if(micros() - sensor_timer >= DT_USEC){       //DT_USEC = 5µs
-      sensor_timer = micros();    //update timer
-      sensor.sample_lidar();      //read lidar 
-      sensor.run_estimator();     //execute estimator
+  //Sample IMU as fast as possible
+  //..... Sensor Timer .....//
+  if(micros() - sensor_timer >= DT_USEC){       //DT_USEC = 5µs
+    sensor_timer = micros();    //update timer
+    sensor.sample_lidar();      //read lidar 
+    sensor.run_estimator();     //execute estimator
 
-      //run position controller to get roll_desired, pitch_desired vals
-      control.lqr_pos(sensor.estimate.vx, 
-                      sensor.estimate.vy, 
-                      sensor.estimate.x, 
-                      sensor.estimate.y, 
-                      sensor.data.yaw);
+    //run position controller to get roll_desired, pitch_desired vals
+    control.lqr_pos(sensor.estimate.vx, 
+                    sensor.estimate.vy, 
+                    sensor.estimate.x, 
+                    sensor.estimate.y, 
+                    sensor.data.yaw);
 
-      //take output of pos controller and set as reference for attitude controller
-       control.set_reference(SETPOINT_ROLL, control.U_pos(0));
-       control.set_reference(SETPOINT_PITCH, control.U_pos(1));
+    // //take output of pos controller and set as reference for attitude controller
+      control.set_reference(SETPOINT_ROLL, control.U_pos(0));
+      control.set_reference(SETPOINT_PITCH, control.U_pos(1));
 
-      //run attitude controller + control allocator
-      control.lqr(sensor.data.roll, 
-                    sensor.data.pitch, 
-                    sensor.data.yaw, 
-                    sensor.data.gx, 
-                    sensor.data.gy, 
-                    sensor.data.gz, 
-                    sensor.estimate.z, 
-                    sensor.estimate.vz);
+    //run attitude controller + control allocator
+    control.lqr(sensor.data.roll, 
+                  sensor.data.pitch, 
+                  sensor.data.yaw, 
+                  sensor.data.gx, 
+                  sensor.data.gy, 
+                  sensor.data.gz, 
+                  sensor.estimate.z, 
+                  sensor.estimate.vz);
 
-    }
-    //..... Optical Flow Timer .....//   
-    if(micros() - flow_timer >= DT_USEC*2){      //run at half speed
-      flow_timer = micros();
-      sensor.sample_flow();       //read flow
-    }
+  }
+  //..... Optical Flow Timer .....//   
+  if(micros() - flow_timer >= DT_USEC*2){      //run at half speed
+    flow_timer = micros();
+    sensor.sample_flow();       //read flow
+  }
 
-    //..... Print Timer .....//
-    if(micros() - print_timer >= (DT_USEC*4)  ){  //print at 1/4 speed to not bog up Serial
-      print_timer = micros();
-      //control.print_debug();
-      print_control_imu();
-      //print_control_imu_estimater();
-      //print_controller();
-      //sensor.print_estimator();
-      //print_estimator_main();
-      //flow_debugger();
+  //..... Print Timer .....//
+  if(micros() - print_timer >= (DT_USEC*4)  ){  //print at 1/4 speed to not bog up Serial
+    print_timer = micros();
+    //control.print_debug();
+    print_control_imu();
+    //print_control_imu_estimater();
+    //print_controller();
+    //sensor.print_estimator();
+    //print_estimator_main();
+    //flow_debugger();
 
-    }
+  }
 }
 
-
-
-void step_response_state_machine(float step_interval_ms, float angle)
-{
+// Used to run step-response testing as guidance path
+void step_response_state_machine(float step_interval_ms, float angle){
   elapsed_time = micros() - mst;
 
   if(elapsed_time >= (step_interval_ms * 1) && elapsed_time < (step_interval_ms * 2) )
@@ -236,46 +226,39 @@ void step_response_state_machine(float step_interval_ms, float angle)
     control.set_reference(SETPOINT_Z , 0.50f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
-    
   }
 
-  else if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3))
-  {
+  else if(elapsed_time >= ( step_interval_ms * 2) && elapsed_time < (step_interval_ms * 3)){
     control.set_reference(SETPOINT_Z , 0.50f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
-  else if(elapsed_time >= ( step_interval_ms * 3 ) && elapsed_time < (step_interval_ms * 4))
-  {
+  else if(elapsed_time >= ( step_interval_ms * 3 ) && elapsed_time < (step_interval_ms * 4)){
     control.set_reference(SETPOINT_Z , 0.50f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
-  else if(elapsed_time >= (step_interval_ms * 4) && elapsed_time <= (step_interval_ms * 5))
-  {
+  else if(elapsed_time >= (step_interval_ms * 4) && elapsed_time <= (step_interval_ms * 5)){
     control.set_reference(SETPOINT_Z , 0.50f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
-  else if(elapsed_time >= (step_interval_ms * 5) && elapsed_time < (step_interval_ms * 6))
-  {
+  else if(elapsed_time >= (step_interval_ms * 5) && elapsed_time < (step_interval_ms * 6)){
     control.set_reference(SETPOINT_Z , 0.50f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
-  else if(elapsed_time >= (step_interval_ms * 6) && (elapsed_time < step_interval_ms * 7))
-  {
+  else if(elapsed_time >= (step_interval_ms * 6) && (elapsed_time < step_interval_ms * 7)){
     control.set_reference(SETPOINT_Z , 0.50f);
     control.set_reference(SETPOINT_X , 0.00f);
     control.set_reference(SETPOINT_Y , 0.00f);
   }
 
-  else if(elapsed_time >= (step_interval_ms * 7) && (elapsed_time < step_interval_ms * 8))
-  {
+  else if(elapsed_time >= (step_interval_ms * 7) && (elapsed_time < step_interval_ms * 8)){
     control.status = CONTROL_STATUS_LANDING;
     control.set_reference(SETPOINT_Z , 0.050f);
     control.set_reference(SETPOINT_X , 0.00f);
@@ -329,10 +312,7 @@ void step_response_state_machine(float step_interval_ms, float angle)
   //else 
  
   #ifndef SENSOR_ONLY
-    if(elapsed_time >= (step_interval_ms * 7) && sensor.estimate.z <= .150f)
-   // if(elapsed_time >= (step_interval_ms * 7))
-    {
-
+    if(elapsed_time >= (step_interval_ms * 7) && sensor.estimate.z <= .150f){
       control.act.edf_shutdown();
       control.act.zero_servos();
       control.act.zero_rw();
@@ -341,16 +321,10 @@ void step_response_state_machine(float step_interval_ms, float angle)
       control.status = CONTROL_STATUS_STATIONARY;
     }
   #endif
-
-
-
 }
 
-//Serial.println("time,x,vx,u0,roll,roll_sp,gx,y,vy,u1,pitch,pitch_sp,gy,yaw,yaw_sp,u2,z,vz,tm,rollgain,pitchgain,gxgain,gygain,s0,s1,s2"); 
-
 //TODO: This function should go in Controller!!!
-void print_control_imu(void)
-{
+void print_control_imu(void){
   char text[250];
   //              Roll  RollSP pitch  pitchSP  yaw       gx      gy    gz        ax    ay      az        cdax   cdaxx   pwmx   cday   cdayy  pwmy  Tm    pwmedf
   sprintf(text, "%0.6f,   %0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  %0.5f,  \t  %0.5f, %0.5f,   %0.5f, %0.5f, %0.5f,  %0.5f,  \t  %0.5f, %0.5f, %0.5f,     \t %0.5f, %0.5f,   %0.5f,  %0.5f, %0.5f,  %0.5f, %0.5f,      %i,%i,%i    ",
@@ -377,7 +351,7 @@ void print_control_imu(void)
     sensor.estimate.z,
     sensor.estimate.vz,
     control.cd.Tm,
-    control._gain_roll,
+    control.act.ad.pwmedf,
     control._gain_pitch,
     control._gain_gx,
     control._gain_gy,
@@ -420,120 +394,116 @@ void print_control_imu_estimater(void)
 
 }
 
-void print_controller(void)
-{
+void print_controller(void){
   char text[250];
   //              roll  rollsp    pitch  pitchsp    yaw        deltax deltay deltax deltay  u0    u1      u2      u3        estvz estz    dataz   dataez  ax      ay    az        Tedf    pwmedf   
   sprintf(text, "%0.5f, %0.5f,%i,       %0.5f,  %0.5f,  %0.5f,       %0.5f,  %0.5f,  %0.5f,  %0.5f,         %0.5f, %0.5f,     %0.5f, %0.5f,  %0.5f,  %0.5f,    %0.5f, %i,       %i, %i, %i ",
-    // r2d*sensor.data.roll,                 // 1
-    // r2d*control.SP_hover_int(0),          // 2
-    // r2d*sensor.data.pitch,                // 3
-    // r2d*control.SP_hover_int(1),          // 4
-    // r2d*sensor.data.yaw,                // 3
-    // r2d*control.SP_hover_int(2),          // 4
+  // r2d*sensor.data.roll,                 // 1
+  // r2d*control.SP_hover_int(0),          // 2
+  // r2d*sensor.data.pitch,                // 3
+  // r2d*control.SP_hover_int(1),          // 4
+  // r2d*sensor.data.yaw,                // 3
+  // r2d*control.SP_hover_int(2),          // 4
 
-    r2d*sensor.data.yaw,                // 3
-    control.cd.u(2),
-    control.act.ad.pwmrw,
+  r2d*sensor.data.yaw,                // 3
+  control.cd.u(2),
+  control.act.ad.pwmrw,
 
 
-    r2d*control.cd.delta_xx,              //6
-    r2d*control.cd.delta_x,               //7
-    r2d*control.cd.delta_yy,              //8
-    r2d*control.cd.delta_y,               //9
+  r2d*control.cd.delta_xx,              //6
+  r2d*control.cd.delta_x,               //7
+  r2d*control.cd.delta_yy,              //8
+  r2d*control.cd.delta_y,               //9
 
-    r2d*control.cd.u(0),                  //10
-    r2d*control.cd.u(1),                  //11
-    (control.cd.u(2)/RW_JZZ),                      //12
-    control.cd.u(3),
+  r2d*control.cd.u(0),                  //10
+  r2d*control.cd.u(1),                  //11
+  (control.cd.u(2)/RW_JZZ),                      //12
+  control.cd.u(3),
 
-    sensor.estimate.vz,                   //13
-    sensor.estimate.z,                    //14
+  sensor.estimate.vz,                   //13
+  sensor.estimate.z,                    //14
 
-    sensor.data.z,                        //15
-    sensor.data.ez,                       //16
-    control.SP_hover_int(6),              //17
+  sensor.data.z,                        //15
+  sensor.data.ez,                       //16
+  control.SP_hover_int(6),              //17
 
-    // sensor.data.ax,                       //18
-    // sensor.data.ay,                       //19
-    // sensor.data.az,                       //20
+  // sensor.data.ax,                       //18
+  // sensor.data.ay,                       //19
+  // sensor.data.az,                       //20
 
-    control.cd.Tedf,                      //21
-    control.cd.u(3),                      //22
-      control.act.ad.pwmedf,              //23
+  control.cd.Tedf,                      //21
+  control.cd.u(3),                      //22
+    control.act.ad.pwmedf,              //23
 
-    sensor.data.linAccuracy,
-    sensor.data.gyroAccuracy,
-    sensor.data.quatAccuracy);
+  sensor.data.linAccuracy,
+  sensor.data.gyroAccuracy,
+  sensor.data.quatAccuracy);
 
   Serial.println(text);
 
 }
-void print_estimator_main(void)
-{
-    char text[250];
+void print_estimator_main(void){
+  char text[250];
 
-    sprintf(text, "%0.5f, %0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
-    r2d*sensor.data.roll,
-    r2d*sensor.data.pitch,
-    r2d*sensor.data.yaw,
-    sensor.data.z,
+  sprintf(text, "%0.5f, %0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
+  r2d*sensor.data.roll,
+  r2d*sensor.data.pitch,
+  r2d*sensor.data.yaw,
+  sensor.data.z,
 
-    sensor.estimate.x,
-    sensor.estimate.y,
-    sensor.estimate.z,
+  sensor.estimate.x,
+  sensor.estimate.y,
+  sensor.estimate.z,
 
-    sensor.estimate.vx,
-    sensor.estimate.vy,
-    sensor.estimate.vz,
+  sensor.estimate.vx,
+  sensor.estimate.vy,
+  sensor.estimate.vz,
 
-    sensor.data.ax,
-    sensor.data.ay,
-    sensor.data.az,
+  sensor.data.ax,
+  sensor.data.ay,
+  sensor.data.az,
 
-    sensor.data.linAccuracy,
-    sensor.data.gyroAccuracy,
-    sensor.data.quatAccuracy);
+  sensor.data.linAccuracy,
+  sensor.data.gyroAccuracy,
+  sensor.data.quatAccuracy);
 
-    Serial.println(text);
+  Serial.println(text);
 }
 
-void flow_debugger(void)
-{
-    char text[250];
+void flow_debugger(void){
+  char text[250];
 
-    sprintf(text, "  %0.5f, %0.5f,  %0.5f, %0.5f, %0.5f,\t       %0.5f, %0.5f, %0.5f, \t       %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",    
+  sprintf(text, "  %0.5f, %0.5f,  %0.5f, %0.5f, %0.5f,\t       %0.5f, %0.5f, %0.5f, \t       %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",    
 
-    sensor.data.ax,
-    sensor.debug.vx_raw,
-    sensor.data.vx,
-    sensor.debug.x_int,
-    sensor.debug.xpre_vx,
- 
-    // sensor.data.ay,
-    // sensor.debug.vy_raw,
-    // sensor.data.vy,
-    // sensor.debug.y_int,
-    // sensor.debug.xpre_vy,
+  sensor.data.ax,
+  sensor.debug.vx_raw,
+  sensor.data.vx,
+  sensor.debug.x_int,
+  sensor.debug.xpre_vx,
 
-    r2d*sensor.data.roll,
-    r2d*sensor.data.pitch,
-    r2d*sensor.data.yaw,
-    
-    sensor.estimate.vx,
-    sensor.estimate.vy,
-    sensor.estimate.vz,
+  // sensor.data.ay,
+  // sensor.debug.vy_raw,
+  // sensor.data.vy,
+  // sensor.debug.y_int,
+  // sensor.debug.xpre_vy,
+
+  r2d*sensor.data.roll,
+  r2d*sensor.data.pitch,
+  r2d*sensor.data.yaw,
+  
+  sensor.estimate.vx,
+  sensor.estimate.vy,
+  sensor.estimate.vz,
 
 
-    sensor.data.linAccuracy,
-    sensor.data.gyroAccuracy,
-    sensor.data.quatAccuracy);
+  sensor.data.linAccuracy,
+  sensor.data.gyroAccuracy,
+  sensor.data.quatAccuracy);
 
-    Serial.println(text);
+  Serial.println(text);
 }
 
-void user_read_int(int & value, String message)
-{
+void user_read_int(int & value, String message){
         //get start microseconds from user and store
     Serial.print(message);
 
@@ -545,21 +515,19 @@ void user_read_int(int & value, String message)
     Serial.println();  
 }
 
-void user_read_float(float & value, String message)
-{
-        //get start microseconds from user and store
-    Serial.print(message);
+void user_read_float(float & value, String message){
+      //get start microseconds from user and store
+  Serial.print(message);
 
-    while (Serial.available()) Serial.read(); //Clear anything in RX buffer
-    while (Serial.available() == 0) delay(10); //Wait for user to press key
+  while (Serial.available()) Serial.read(); //Clear anything in RX buffer
+  while (Serial.available() == 0) delay(10); //Wait for user to press key
 
-    //Read user input
-    value = Serial.parseFloat();
-    Serial.println();  
+  //Read user input
+  value = Serial.parseFloat();
+  Serial.println();  
 }
 
-void user_read_anykey(String message)
-{
+void user_read_anykey(String message){
     Serial.println(message);
     while (Serial.available()) Serial.read(); //Clear anything in RX buffer
     while (Serial.available() == 0) delay(10); //Wait for user to press key

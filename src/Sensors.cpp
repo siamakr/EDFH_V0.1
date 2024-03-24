@@ -1,26 +1,20 @@
 #include "Sensors.h"
 
-    Sensors::Sensors(void){
+Sensors::Sensors(void){
+}
 
-    }
-
-void Sensors::init(void)
-{
+void Sensors::init(void){
     lidar_init();
     delay(100);
     fsm_init();
-
     //flow_init();
 }
-    //... GARMIN LIDAR functions end ...//
-void Sensors::fsm_init(void)
-{
+//... GARMIN LIDAR functions end ...//
+void Sensors::fsm_init(void){
     //..... FSM305/BNO080 Init .....//
     Serial.print("FSM Init start..."); 
     //delay(300);
-
-    if (fsm.beginSPI(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin, 4000000) == false)
-    {
+    if (fsm.beginSPI(imuCSPin, imuWAKPin, imuINTPin, imuRSTPin, 4000000) == false){
         Serial.println("BNO080 over SPI not detected. Are you sure you have all 6 connections? Freezing...");
         while(1);
     }
@@ -40,8 +34,7 @@ void Sensors::fsm_init(void)
     yaw_origin = data.yaw;
 }
 
-void Sensors::lidar_init(void)
-{   
+void Sensors::lidar_init(void){   
     Wire.begin();
     delay(100);
     // "2" = short-range, fast speed
@@ -52,7 +45,7 @@ void Sensors::lidar_init(void)
 
 void Sensors::flow_init(void){
 // Initiate flow sensor
-    if ( flow.begin() ) {
+    if(flow.begin()){
         flow.setLed(true);
         Serial.println("Flow connected successfully"); 
     }else{
@@ -62,27 +55,21 @@ void Sensors::flow_init(void){
 
 }
 
-    ///.......... FSM305/BNO080 FUNCTIONS ..........////
-
-void Sensors::save_calibrate_fsm(void)
-{
-    if(Serial.available())
-    {
+///.......... FSM305/BNO080 FUNCTIONS ..........////
+void Sensors::save_calibrate_fsm(void){
+    if(Serial.available()){
         byte incoming = Serial.read();
 
-        if(incoming == 's')
-        {
+        if(incoming == 's'){
             fsm.saveCalibration(); //Saves the current dynamic calibration data (DCD) to memory
             fsm.requestCalibrationStatus(); //Sends command to get the latest calibration status
 
             //Wait for calibration response, timeout if no response
             int counter = 100;
         
-            while(1)
-            {
+            while(1){
                 if(--counter == 0) break;
-                if(fsm.dataAvailable() == true)
-            {
+                if(fsm.dataAvailable() == true){
                 //The IMU can report many different things. We must wait
                 //for the ME Calibration Response Status byte to go to zero
                 if(fsm.calibrationComplete() == true)
@@ -97,19 +84,14 @@ void Sensors::save_calibrate_fsm(void)
         }
 
         if(counter == 0) Serial.println("Calibration data failed to store. Please try again.");
-
         //fsm.endCalibration(); //Turns off all calibration
         //In general, calibration should be left on at all times. The BNO080
         //auto-calibrates and auto-records cal data roughly every 5 minutes
         }
-    } 
-    
+    }  
 } 
 
-
-void Sensors::sample_fsm(void)
-{
-
+void Sensors::sample_fsm(void){
     if(fsm.dataAvailable() == true)
     {
         // switched x and y axes due to mounting orientation
@@ -121,7 +103,6 @@ void Sensors::sample_fsm(void)
         // debug.ax_nf = data.ax;
         // debug.ay_nf = data.ay;
         // debug.az_nf = data.az;
-
 
         data.linAccuracy = fsm.getLinAccelAccuracy();
         data.ay = IIR(fsm.getLinAccelX(), data.ay, _alpha_accel);
@@ -161,31 +142,25 @@ void Sensors::sample_fsm(void)
         data.yaw = fsm.getYaw();    
         //data.yaw = rotate_yaw(yaw_raw);
         //data.yaw = fsm.getYaw();
+    }
+}
+//... FSM305 Functions End ...//
+    
+//... GARMIN LIDAR functions Begin ...//
+void Sensors::sample_lidar(void){
+    if (garmin.getBusyFlag() == 0){
+        // Trigger the next range measurement
+        garmin.takeRange();
 
-        
+        // Read new distance data from device registers
+        data.z = (float)(garmin.readDistance()/100.00f) - 0.08f;
+
+        // Report to calling function that we have new data
+        data.status.lidar = 1;
     }
 }
 
-    //... FSM305 Functions End ...//
-    
-    //... GARMIN LIDAR functions Begin ...//
-    void Sensors::sample_lidar(void)
-    {
-        if (garmin.getBusyFlag() == 0)
-        {
-            // Trigger the next range measurement
-            garmin.takeRange();
-
-            // Read new distance data from device registers
-            data.z = (float)(garmin.readDistance()/100.00f) - 0.08f;
-
-            // Report to calling function that we have new data
-            data.status.lidar = 1;
-        }
-    }
-
 void Sensors::sample_flow(){
-
     static uint32_t last_sample;
     int16_t dx, dy;
     float ofx, ofy;
@@ -224,14 +199,9 @@ void Sensors::sample_flow(){
     // Serial.println(debug.y_int);
 
     data.status.flow = 1;
+}
 
-
-    }
-
-
-    void Sensors::run_estimator(void){
-
-
+void Sensors::run_estimator(void){
     /* ---- Sensor processing ---- */
     float p[3] = {0.00f}; // Position vector (z body to world)
     float v[3] = {0.00f}; // Velocity vector (vx, vy to world)
@@ -247,8 +217,6 @@ void Sensors::sample_flow(){
     // Perform gyrocompensation on flow and rotate to world frame.
 
     //---debugging ---//
-
-
     v[0] = data.vx * p[2] - data.gy * p[2];
     v[1] = data.vy * p[2] - data.gx * p[2]; 
     rotate_to_world( v );
@@ -276,9 +244,8 @@ void Sensors::sample_flow(){
     Z.Fill(0.00f);
     U_est = { a[0], a[1], a[2] };
 
-
     // Fill measurement vector with data
-   // if( data.status.pos == 1 ){
+    // if( data.status.pos == 1 ){
         // H(0,0) = 1; H(1,1) = 1;
         // Z(0) = data.x;
         // Z(1) = data.y;
@@ -295,6 +262,7 @@ void Sensors::sample_flow(){
         Z(4) = v[1]; // vy
     }
 
+    //debugging:
     // Matrix <6,1> Xpre_t1 = A * Xe;
     // Matrix <6,1> Xpre_t2 = B * U_est;
     // Matrix <6,1> Xpre_temp = Xpre_t1 + Xpre_t2;
@@ -329,16 +297,12 @@ void Sensors::sample_flow(){
 
 void Sensors::set_origin(){
     yaw_origin = data.yaw;
-
    // X.Fill(0);
 }
 
-
 void Sensors::update_pos( float x, float y ){
-
     data.x = x;
     data.y = y;
-
     data.status.pos = 1;
 }
 
@@ -353,133 +317,117 @@ float Sensors::rotate_yaw( float yaw ){
         rotated += TWO_PI;
     
     return rotated;
-
 }
 
 void Sensors::clamp(float &value, float min, float max){
-
     value = (value <= max && value >= min) ? 0.00f : value;
 }
-    void Sensors::rotate_to_world( float * vector )
-    {
 
-        // float p = 0;
-        // float q = 0;
-        //  float u = 0;
-        float p = data.roll;
-        float q = data.pitch;
-        float u = data.yaw;
-        //float u = 0.00f;
-        Matrix<3,1> in = { vector[0], vector[1], vector[2] };
-        Matrix<3,1> out = {0,0,0};
+void Sensors::rotate_to_world( float * vector ){
 
-        // Matrix<3,3> R = {   cos(data.pitch)*cos(data.yaw), sin(data.roll)*sin(data.pitch)*cos(data.yaw)-cos(data.roll)*sin(data.yaw), cos(data.roll)*sin(data.pitch)*cos(data.yaw)+sin(data.roll)*sin(data.yaw) ,
-        //                     cos(data.pitch)*sin(data.yaw), sin(data.roll)*sin(data.pitch)*sin(data.yaw)+cos(data.roll)*cos(data.yaw), cos(data.roll)*sin(data.pitch)*sin(data.yaw)-sin(data.roll)*cos(data.yaw) ,
-        //                     -sin(data.pitch),       sin(data.roll)*cos(data.pitch),                      cos(data.roll)*cos(data.pitch)                      };
-        Matrix<3,3> R = {   cos(q)*cos(u), sin(p)*sin(q)*cos(u)-cos(p)*sin(u), cos(p)*sin(q)*cos(u)+sin(p)*sin(u) ,
-                            cos(q)*sin(u), sin(p)*sin(q)*sin(u)+cos(p)*cos(u), cos(p)*sin(q)*sin(u)-sin(p)*cos(u) ,
-                            -sin(q),       sin(p)*cos(q),                      cos(p)*cos(q)                      };
+    float p = data.roll;
+    float q = data.pitch;
+    float u = data.yaw;
 
-        out = R * in;
+    Matrix<3,1> in = { vector[0], vector[1], vector[2] };
+    Matrix<3,1> out = {0,0,0};
+    Matrix<3,3> R = {   cos(q)*cos(u), sin(p)*sin(q)*cos(u)-cos(p)*sin(u), cos(p)*sin(q)*cos(u)+sin(p)*sin(u) ,
+                        cos(q)*sin(u), sin(p)*sin(q)*sin(u)+cos(p)*cos(u), cos(p)*sin(q)*sin(u)-sin(p)*cos(u) ,
+                        -sin(q),       sin(p)*cos(q),                      cos(p)*cos(q)                      };
 
-        vector[0] = out(0);
-        vector[1] = out(1);
-        vector[2] = out(2);
+    out = R * in;
 
-    }
+    vector[0] = out(0);
+    vector[1] = out(1);
+    vector[2] = out(2);
 
-    float Sensors::IIR(float newSample, float prevOutput, float alpha)
-    {
-        return ( (1.0f-alpha)*newSample + alpha * prevOutput);
-    }
+}
 
+float Sensors::IIR(float newSample, float prevOutput, float alpha){
+    return ( (1.0f-alpha)*newSample + alpha * prevOutput);
+}
 
-    void Sensors::print_imu(void)
-    {
-        char text[250];
+void Sensors::print_imu(void){
+    char text[250];
+    sprintf(text, "%0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
+    r2d*data.roll,
+    r2d*data.pitch,
+    r2d*data.yaw,
 
-        sprintf(text, "%0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
-        r2d*data.roll,
-        r2d*data.pitch,
-        r2d*data.yaw,
+    r2d*data.gx,
+    r2d*data.gy,
+    r2d*data.gz,
 
-        r2d*data.gx,
-        r2d*data.gy,
-        r2d*data.gz,
+    data.ax,
+    data.ay,
+    data.az,
 
-        data.ax,
-        data.ay,
-        data.az,
+    estimate.x,
+    estimate.y,
+    estimate.z,
 
-        estimate.x,
-        estimate.y,
-        estimate.z,
+    estimate.vx,
+    estimate.vy,
+    estimate.vz,
 
-        estimate.vx,
-        estimate.vy,
-        estimate.vz,
+    data.linAccuracy,
+    data.gyroAccuracy,
+    data.quatAccuracy);
 
-        data.linAccuracy,
-        data.gyroAccuracy,
-        data.quatAccuracy);
-
-        Serial.println(text);
-    }
+    Serial.println(text);
+}
 
 
-    void Sensors::print_fsm(void)
-    {
-        char text[250];
+void Sensors::print_fsm(void){
+    char text[250];
+    sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f    ",
+    r2d*data.roll,
+    r2d*data.pitch,
+    r2d*data.yaw,
+    data.qi,
+    data.qj,
+    data.qk,
+    data.qw,
+    r2d*data.gx,
+    r2d*data.gy,
+    r2d*data.gz,
+    data.ax,
+    data.ay,
+    data.az);
 
-        sprintf(text, "%0.5f, %0.5f, %0.5f,\t   %0.5f, %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f    ",
-        r2d*data.roll,
-        r2d*data.pitch,
-        r2d*data.yaw,
-        data.qi,
-        data.qj,
-        data.qk,
-        data.qw,
-        r2d*data.gx,
-        r2d*data.gy,
-        r2d*data.gz,
-        data.ax,
-        data.ay,
-        data.az);
+    Serial.print(text);
+    Serial.print(data.linAccuracy);
+    Serial.print(", ");
+    Serial.print(data.gyroAccuracy);
+    Serial.print(", ");
+    Serial.print(data.quatAccuracy);
+    Serial.println(", ");
+}
 
-        Serial.print(text);
-        Serial.print(data.linAccuracy);
-        Serial.print(", ");
-        Serial.print(data.gyroAccuracy);
-        Serial.print(", ");
-        Serial.print(data.quatAccuracy);
-        Serial.println(", ");
-    }
-    
-    void Sensors::print_estimator(void)
-    {
-        char text[250];
+void Sensors::print_estimator(void){
+    char text[250];
 
-        sprintf(text, "%0.5f, %0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
-        r2d*data.roll,
-        r2d*data.pitch,
-        r2d*data.yaw,
-        data.z,
+    sprintf(text, "%0.5f, %0.5f, %0.5f, %0.5f, \t   %0.5f, %0.5f, %0.5f,\t  %0.5f, %0.5f, %0.5f, \t  %0.5f, %0.5f, %0.5f, \t  %i, %i, %i ",
+    r2d*data.roll,
+    r2d*data.pitch,
+    r2d*data.yaw,
+    data.z,
 
-        estimate.x,
-        estimate.y,
-        estimate.z,
+    estimate.x,
+    estimate.y,
+    estimate.z,
 
-        estimate.vx,
-        estimate.vy,
-        estimate.vz,
+    estimate.vx,
+    estimate.vy,
+    estimate.vz,
 
-        data.ax,
-        data.ay,
-        data.az,
+    data.ax,
+    data.ay,
+    data.az,
 
-        data.linAccuracy,
-        data.gyroAccuracy,
-        data.quatAccuracy);
+    data.linAccuracy,
+    data.gyroAccuracy,
+    data.quatAccuracy);
 
-        Serial.println(text);
-    }
+    Serial.println(text);
+}
