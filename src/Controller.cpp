@@ -156,7 +156,6 @@ void Controller::set_reference( control_setpoint_t cs, float value ){
         case SETPOINT_PITCH: SP_hover_int(1) = value; break;
         case SETPOINT_YAW: SP_hover_int(2) = value; break;
     }
-
 }
 
 void Controller::gain_schedule(float error_roll, float error_gx, float error_pitch, float error_gy, float error_altitude){
@@ -179,8 +178,6 @@ void Controller::gain_schedule(float error_roll, float error_gx, float error_pit
     LIMIT(_gain_gy, 0.080, 0.12);
     //-- altitude
 }
-
-
 
 float Controller::limit(float value, float min, float max){
     return value <= min ? min : (value >= max ? max : value); 

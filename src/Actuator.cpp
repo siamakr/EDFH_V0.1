@@ -49,8 +49,6 @@ void Actuator::zero_rw(){
     rw.writeMicroseconds(900);  
 }
 
-
-
 void Actuator::prime_edf(void){
     //go to 1500 and wait 5 seconds
     edf.writeMicroseconds(EDF_MIN_PWM);
@@ -71,12 +69,18 @@ bool Actuator::prime_edf(int delay_time_ms, float start_timer){
         return false;
     }
 }
+/*
+max_angle refers to the radius that parametrization 
+of the circle to be "drawn" by the tip of the TVC motor
+Ex. max_angle = 5 referes that the maximum TVC angle that 
+is actuated by the servos is 5 degrees.0
+inputs: max_angle
+        delay_time_ms
+output: bool
 
+*/
 bool Actuator::servo_dance(float max_angle, int delay_time_ms){
-    //max_angle refers to the radius that parametrization 
-    //of the circle to be "drawn" by the tip of the TVC motor
-    //Ex. max_angle = 5 referes that the maximum TVC angle that 
-    //is actuated by the servos is 5 degrees.
+
 
     // writeYservo(max_angle);
     // delay(500);
@@ -147,7 +151,6 @@ void Actuator::writeRW(float grams){
     ad.antirotor_thrust_g = grams;
     rw.writeMicroseconds(pwm);
 }
-
 
 void Actuator::edf_shutdown(void){
     edf.writeMicroseconds(EDF_OFF_PWM);
